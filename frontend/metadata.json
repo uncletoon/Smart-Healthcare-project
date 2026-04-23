@@ -1,0 +1,6 @@
+{
+  "name": "Kizazi Health",
+  "description": "A real-time healthcare network for Rwanda, providing instant medicine availability, clinic wait-times, and emergency resource tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

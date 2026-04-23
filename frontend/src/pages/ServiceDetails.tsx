@@ -1,0 +1,321 @@
+import React from "react";
+import { useParams, Link } from "react-router-dom";
+import {
+  MapPin,
+  Calendar,
+  Clock,
+  ShieldCheck,
+  ChevronLeft,
+  Phone,
+  MessageSquare,
+  Share2,
+  Heart,
+  CheckCircle2,
+  AlertCircle,
+  Activity,
+  ArrowRight,
+  Building2,
+  Star,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+
+const SERVICE_DATA = {
+  id: "general-consultation",
+  title: "General Consultation",
+  category: "General Medicine",
+  description:
+    "Comprehensive medical evaluation for various health concerns, seasonal illnesses, and routine check-ups. Our general practitioners provide personalized care and diagnostic screenings to ensure your long-term health.",
+  price: "15,000 RWF",
+  duration: "30 - 45 Minutes",
+  facility: {
+    name: "Kigali Life Medical Center",
+    location: "Kimironko, Kigali",
+    distance: "1.2 km away",
+    rating: 4.8,
+    reviews: 156,
+    image: "https://picsum.photos/seed/kigali-medical/800/600",
+  },
+  insuranceAccepted: [
+    {
+      name: "RSSB",
+      logo: "https://api.iconify.design/material-symbols:account-balance.svg",
+    },
+    {
+      name: "MMI",
+      logo: "https://api.iconify.design/material-symbols:account-balance.svg",
+    },
+    {
+      name: "Britam",
+      logo: "https://api.iconify.design/material-symbols:account-balance.svg",
+    },
+    {
+      name: "UAP Insurance",
+      logo: "https://api.iconify.design/material-symbols:account-balance.svg",
+    },
+    {
+      name: "Radiance Health",
+      logo: "https://api.iconify.design/material-symbols:account-balance.svg",
+    },
+  ],
+  requirements: [
+    "Original National ID or Passport",
+    "Insurance card (if applicable)",
+    "Previous medical records (optional but recommended)",
+    "No prior appointment needed for walk-ins (Wait time approx. 20m)",
+  ],
+  highlights: [
+    "Board-certified General Practitioners",
+    "Modern diagnostic equipment",
+    "Digital prescription services",
+    "Immediate lab referral if needed",
+  ],
+};
+
+export default function ServiceDetail() {
+  const { id } = useParams();
+
+  return (
+    <div className="pt-6 pb-24 bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Breadcrumbs */}
+        <nav className="mb-8 flex items-center space-x-2 text-sm">
+          <Link to="/" className="text-gray-500 hover:text-primary">
+            Home
+          </Link>
+          <span className="text-gray-300">/</span>
+          <Link to="/services" className="text-gray-500 hover:text-primary">
+            Medical Services
+          </Link>
+          <span className="text-gray-300">/</span>
+          <span className="text-primary font-bold">{SERVICE_DATA.title}</span>
+        </nav>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          {/* Left Column: Content */}
+          <div className="lg:col-span-2 space-y-12">
+            {/* Header Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100"
+            >
+              <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
+                <div>
+                  <span className="px-3 py-1 bg-secondary/10 text-secondary text-[10px] font-bold rounded uppercase tracking-wider mb-3 inline-block">
+                    {SERVICE_DATA.category}
+                  </span>
+                  <h1 className="text-4xl md:text-5xl font-bold text-primary mb-4">
+                    {SERVICE_DATA.title}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-6 text-sm text-gray-500">
+                    <div className="flex items-center">
+                      <Clock size={16} className="text-secondary mr-2" />
+                      {SERVICE_DATA.duration}
+                    </div>
+                    <div className="flex items-center">
+                      <MapPin size={16} className="text-secondary mr-2" />
+                      {SERVICE_DATA.facility.location}
+                    </div>
+                    <div className="flex items-center">
+                      <ShieldCheck size={16} className="text-secondary mr-2" />
+                      Accredited Care
+                    </div>
+                  </div>
+                </div>
+                <div className="flex space-x-2">
+                  <button className="p-3 bg-gray-50 rounded-full text-gray-400 hover:text-primary hover:bg-gray-100 transition-all shadow-sm">
+                    <Share2 size={20} />
+                  </button>
+                  <button className="p-3 bg-gray-50 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm">
+                    <Heart size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-lg text-gray-600 leading-relaxed mb-8">
+                {SERVICE_DATA.description}
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {SERVICE_DATA.highlights.map((item, idx) => (
+                  <div key={idx} className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-secondary/10 rounded-full flex items-center justify-center mt-0.5">
+                      <CheckCircle2 size={14} className="text-secondary" />
+                    </div>
+                    <span className="text-gray-700">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Insurance Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100"
+            >
+              <h2 className="text-2xl font-bold text-primary mb-8 flex items-center">
+                <ShieldCheck className="text-secondary mr-3" />
+                Insurance Partners Accepted
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+                {SERVICE_DATA.insuranceAccepted.map((insurance, idx) => (
+                  <div
+                    key={idx}
+                    className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-secondary transition-all group"
+                  >
+                    <div className="w-12 h-12 mb-3 bg-white rounded-full flex items-center justify-center border border-gray-50 overflow-hidden group-hover:scale-110 transition-transform">
+                      {/* Using a placeholder icon/emoji since we don't have actual logos */}
+                      <ShieldCheck className="text-primary/40" size={24} />
+                    </div>
+                    <span className="text-xs font-bold text-gray-700 text-center">
+                      {insurance.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-8 p-4 bg-blue-50 rounded-2xl flex items-start space-x-3 border border-blue-100">
+                <AlertCircle
+                  className="text-blue-500 shrink-0 mt-0.5"
+                  size={20}
+                />
+                <p className="text-sm text-blue-700">
+                  Please bring your active insurance membership card. Coverage
+                  depends on your specific policy terms. Some extras may require
+                  out-of-pocket payment.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Requirements & Preparation */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-primary rounded-3xl p-8 text-white relative overflow-hidden"
+            >
+              <div className="relative z-10">
+                <h2 className="text-2xl font-bold mb-6">
+                  Patient Requirements
+                </h2>
+                <div className="space-y-4">
+                  {SERVICE_DATA.requirements.map((req, idx) => (
+                    <div key={idx} className="flex items-center space-x-4">
+                      <div className="w-2 h-2 rounded-full bg-secondary"></div>
+                      <p className="text-white/90">{req}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32"></div>
+            </motion.div>
+          </div>
+
+          {/* Right Column: Actions & Info */}
+          <div className="space-y-8">
+            {/* Booking Card */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-100 sticky top-28"
+            >
+              <div className="text-center mb-8">
+                <span className="text-gray-500 text-sm block mb-1">
+                  Standard Price
+                </span>
+                <div className="text-4xl font-bold text-primary">
+                  {SERVICE_DATA.price}
+                </div>
+              </div>
+
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Calendar size={18} className="mr-3 text-secondary" />
+                    Available Date
+                  </div>
+                  <span className="text-sm font-bold text-gray-900">
+                    Today, Apr 21
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Clock size={18} className="mr-3 text-secondary" />
+                    Avg. Wait Time
+                  </div>
+                  <span className="text-sm font-bold text-secondary">
+                    20 Mins
+                  </span>
+                </div>
+              </div>
+
+              <button className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all mb-4 flex items-center justify-center">
+                <Calendar size={20} className="mr-2" />
+                Book Appointment
+              </button>
+
+              <button className="w-full border-2 border-gray-100 text-gray-700 py-4 rounded-2xl font-bold hover:bg-gray-50 transition-all flex items-center justify-center">
+                <Phone size={20} className="mr-2 text-primary" />
+                Call Facility
+              </button>
+
+              <div className="mt-8 pt-8 border-t border-gray-100">
+                <h4 className="font-bold text-gray-900 mb-4 flex items-center">
+                  <Building2 size={18} className="text-secondary mr-2" />
+                  Facility Information
+                </h4>
+                <div className="flex items-center space-x-4 mb-4">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-sm">
+                    <img
+                      src={SERVICE_DATA.facility.image}
+                      alt={SERVICE_DATA.facility.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-sm text-gray-900">
+                      {SERVICE_DATA.facility.name}
+                    </h5>
+                    <div className="flex items-center text-[10px] text-gray-500 mt-1">
+                      <Star
+                        size={10}
+                        fill="currentColor"
+                        className="text-yellow-500 mr-1"
+                      />
+                      {SERVICE_DATA.facility.rating} (
+                      {SERVICE_DATA.facility.reviews} reviews)
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center text-xs text-gray-500 mb-6">
+                  <MapPin size={14} className="mr-2 text-secondary" />
+                  {SERVICE_DATA.facility.location} •{" "}
+                  {SERVICE_DATA.facility.distance}
+                </div>
+
+                <button className="w-full bg-secondary/10 text-secondary py-3 rounded-xl font-bold text-sm hover:bg-secondary/20 transition-all flex items-center justify-center">
+                  <MapPin size={16} className="mr-2" />
+                  View Map & Directions
+                </button>
+              </div>
+            </motion.div>
+
+            {/* Assistance Card */}
+            <div className="bg-stats-blue rounded-3xl p-8 text-white">
+              <h3 className="font-bold text-lg mb-4">Need Help?</h3>
+              <p className="text-sm text-white/80 mb-6 leading-relaxed">
+                Our support team can help you find specialized services or
+                manage insurance claims.
+              </p>
+              <button className="w-full bg-white text-primary py-3 rounded-xl font-bold text-sm flex items-center justify-center shadow-lg">
+                <MessageSquare size={16} className="mr-2" />
+                Chat with Support
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
