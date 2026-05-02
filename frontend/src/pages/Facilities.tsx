@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   MapPin,
@@ -11,11 +11,54 @@ import {
   Activity,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { MOCK_FACILITIES } from "@/src/types";
+import { api } from "@/src/services/api";
 import { cn } from "@/src/lib/utils";
 import { Link } from "react-router-dom";
 
 export function Facilities() {
+  const [facilities, setFacilities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFacilities = async () => {
+      try {
+        const [data, categoriesData, locationsData] = await Promise.all([
+          api.getFacilities(),
+          api.getCategories(),
+          api.getLocations()
+        ]);
+        
+        // Map backend data to frontend shape
+        const mappedData = data.map((item) => {
+          const category = categoriesData.find(c => c.id === item.company_categories);
+          const location = locationsData.find(l => l.id === item.location);
+          
+          return {
+            id: item.id.toString(),
+            name: item.company_name,
+            type: category ? category.category_name : "Facility", // Map from API
+            location: location ? location.location_name : item.company_address || "Kigali",
+            distance: "2.5 km", // Static for now as requested
+            rating: 4.5, // Static for now
+            reviews: 120, // Static for now
+            status: "Open Now", // Static for now
+            hours: item.hours || "24/7", // Coming from API
+            description: item.company_description,
+            image: item.company_logo || "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800",
+            services: [],
+          };
+        });
+        setFacilities(mappedData);
+      } catch (error) {
+        console.error("Failed to fetch facilities:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFacilities();
+  }, []);
+
   return (
     <div className="bg-surface min-h-screen py-16">
       <div className="container-custom">
@@ -23,7 +66,7 @@ export function Facilities() {
           Healthcare Facilities
         </h1>
         <p className="text-text-muted mb-12">
-          Showing 24 results for pharmacies and clinics in Kigali
+          Showing {facilities.length} results for pharmacies and clinics in Kigali
         </p>
 
         {/* Search & Filters */}
@@ -94,91 +137,103 @@ export function Facilities() {
 
           {/* Facilities List */}
           <div className="lg:col-span-3 space-y-8">
-            {MOCK_FACILITIES.map((facility, idx) => (
-              <motion.div
-                key={facility.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
-                className="bg-surface p-8 rounded-[20px] shadow-sm border border-black/5 dark:border-white/5 flex flex-col md:flex-row gap-8 group hover:shadow-xl transition-all"
-              >
-                <div className="w-full md:w-72 h-48 rounded-2xl overflow-hidden shrink-0">
-                  <img
-                    src={facility.image}
-                    alt={facility.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-                <div className="flex-1 flex flex-col justify-between">
-                  <div>
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="text-2xl font-bold text-primary mb-1">
-                          {facility.name}
-                        </h3>
-                        <div className="flex items-center gap-3">
-                          <span className="bg-secondary text-primary text-[10px] font-black px-2 py-1 rounded tracking-widest uppercase">
-                            {facility.type}
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : facilities.length === 0 ? (
+              <div className="text-center text-text-muted py-12">
+                No facilities found.
+              </div>
+            ) : (
+              facilities.map((facility, idx) => (
+                <motion.div
+                  key={facility.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="bg-surface p-8 rounded-[20px] shadow-sm border border-black/5 dark:border-white/5 flex flex-col md:flex-row gap-8 group hover:shadow-xl transition-all"
+                >
+                  <div className="w-full md:w-72 h-48 rounded-2xl overflow-hidden shrink-0">
+                    <img
+                      src={facility.image}
+                      alt={facility.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="text-2xl font-bold text-primary mb-1">
+                            {facility.name}
+                          </h3>
+                          <div className="flex items-center gap-3">
+                            <span className="bg-secondary text-primary text-[10px] font-black px-2 py-1 rounded tracking-widest uppercase">
+                              {facility.type}
+                            </span>
+                            <p className="text-text-muted text-xs flex items-center gap-1">
+                              <MapPin size={12} /> {facility.location}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 bg-accent/20 text-accent-dark px-2 py-1 rounded-lg">
+                          <Star size={14} fill="currentColor" />
+                          <span className="text-xs font-bold text-primary">
+                            {facility.rating}
                           </span>
-                          <p className="text-text-muted text-xs flex items-center gap-1">
-                            <MapPin size={12} /> {facility.location}
-                          </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 bg-accent/20 text-accent-dark px-2 py-1 rounded-lg">
-                        <Star size={14} fill="currentColor" />
-                        <span className="text-xs font-bold text-primary">
-                          {facility.rating}
+                      <p className="text-text-muted text-sm leading-relaxed mt-4 line-clamp-2">
+                        {facility.description}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between mt-8">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={cn(
+                            "w-2 h-2 rounded-full",
+                            facility.status === "Open Now"
+                              ? "bg-green-500"
+                              : "bg-red-500",
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "text-xs font-bold",
+                            facility.status === "Open Now"
+                              ? "text-green-600"
+                              : "text-red-600",
+                          )}
+                        >
+                          {facility.status}
                         </span>
                       </div>
-                    </div>
-                    <p className="text-text-muted text-sm leading-relaxed mt-4 line-clamp-2">
-                      {facility.description}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between mt-8">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={cn(
-                          "w-2 h-2 rounded-full",
-                          facility.status === "Open Now"
-                            ? "bg-green-500"
-                            : "bg-red-500",
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "text-xs font-bold",
-                          facility.status === "Open Now"
-                            ? "text-green-600"
-                            : "text-red-600",
-                        )}
+                      <Link
+                        to={`/facilities/${facility.id}`}
+                        className="text-primary font-bold text-sm flex items-center gap-2 hover:underline"
                       >
-                        {facility.status}
-                      </span>
+                        View Details{" "}
+                        <ChevronDown className="-rotate-90" size={16} />
+                      </Link>
                     </div>
-                    <Link
-                      to={`/facilities/${facility.id}`}
-                      className="text-primary font-bold text-sm flex items-center gap-2 hover:underline"
-                    >
-                      View Details{" "}
-                      <ChevronDown className="-rotate-90" size={16} />
-                    </Link>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))
+            )}
 
             {/* Pagination */}
-            <div className="flex justify-center gap-2 pt-12">
-              <PaginationButton label="1" active />
-              <PaginationButton label="2" />
-              <PaginationButton label="3" />
-              <span className="px-4 py-2 text-text-muted">...</span>
-              <PaginationButton label="8" />
-            </div>
+            {!loading && facilities.length > 0 && (
+              <div className="flex justify-center gap-2 pt-12">
+                <PaginationButton label="1" active />
+                <PaginationButton label="2" />
+                <PaginationButton label="3" />
+                <span className="px-4 py-2 text-text-muted">...</span>
+                <PaginationButton label="8" />
+              </div>
+            )}
           </div>
         </div>
       </div>

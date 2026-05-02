@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   MapPin,
@@ -16,17 +16,83 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { MOCK_FACILITIES, MOCK_MEDICINES } from "@/src/types";
+import { api } from "@/src/services/api";
 import { cn } from "@/src/lib/utils";
 
 export function FacilityDetail() {
   const { id } = useParams();
-  const facility =
-    MOCK_FACILITIES.find((f) => f.id === id) || MOCK_FACILITIES[0];
+  const [facility, setFacility] = useState(null);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [facilityData, allServices, categoriesData, locationsData] = await Promise.all([
+          api.getFacility(id),
+          api.getServices(),
+          api.getCategories(),
+          api.getLocations()
+        ]);
+
+        const category = categoriesData.find(c => c.id === facilityData.company_categories);
+        const location = locationsData.find(l => l.id === facilityData.location);
+
+        setFacility({
+          id: facilityData.id.toString(),
+          name: facilityData.company_name,
+          type: category ? category.category_name : "Facility", // Map from API
+          location: location ? location.location_name : facilityData.company_address || "Kigali",
+          distance: "2.5 km", // Static for now
+          rating: 4.5, // Static for now
+          reviews: 120, // Static for now
+          status: "Open Now", // Static for now
+          hours: facilityData.hours || "24/7", // Map from API
+          // description: facilityData.company_description,
+          image: facilityData.company_logo || "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800",
+          services: ["Digital Prescriptions", "Home Delivery", "BP Screening"], // Static mock services array for bottom section
+        });
+
+        const facilityServices = allServices.filter(s => s.facility.toString() === id);
+        
+        setServices(facilityServices.slice(0, 3).map(s => ({
+          id: s.id.toString(),
+          name: s.name,
+          category: 'Service',
+          dosage: 'N/A',
+          price: s.price || "N/A",
+        })));
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchData();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="bg-surface min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!facility) {
+    return (
+      <div className="bg-surface min-h-screen flex items-center justify-center">
+        <p className="text-xl text-text-muted">Facility not found</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-surface min-h-screen pb-24">
-      <section className="relative h-[400px] overflow-hidden">
+      <section className="relative h-[250px] overflow-hidden">
         <img
           src={facility.image}
           alt={facility.name}
@@ -96,7 +162,7 @@ export function FacilityDetail() {
             <section>
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-display font-bold text-primary">
-                  Medicine Inventory
+                  Available Services & Inventory
                 </h2>
                 <div className="relative">
                   <Search
@@ -105,14 +171,14 @@ export function FacilityDetail() {
                   />
                   <input
                     type="text"
-                    placeholder="Search medicines..."
+                    placeholder="Search services..."
                     className="bg-surface border border-black/5 dark:border-white/5 rounded-xl pl-12 pr-6 py-3 text-sm outline-none focus:border-primary transition-colors"
                   />
                 </div>
               </div>
 
               <div className="space-y-4">
-                {MOCK_MEDICINES.slice(0, 3).map((med) => (
+                {services.map((med) => (
                   <div
                     key={med.id}
                     className="bg-surface p-6 p-2 rounded-3xl border border-black/5 dark:border-white/5 flex items-center justify-between group hover:shadow-md transition-all"
@@ -124,7 +190,7 @@ export function FacilityDetail() {
                       <div>
                         <h4 className="font-bold text-primary">{med.name}</h4>
                         <p className="text-xs text-text-muted">
-                          {med.category} • {med.dosage}
+                          {med.category}
                         </p>
                         <div className="flex items-center gap-1 mt-1">
                           <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
@@ -136,14 +202,17 @@ export function FacilityDetail() {
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-display font-bold text-primary mb-2">
-                        {med.price.toLocaleString()} RWF
+                        {parseFloat(med.price).toLocaleString()} RWF
                       </p>
                       <button className="bg-secondary text-primary px-4 py-2 rounded-lg text-xs font-bold hover:bg-primary hover:text-white transition-all">
-                        Reserve Medicine
+                        Reserve/Book
                       </button>
                     </div>
                   </div>
                 ))}
+                {services.length === 0 && (
+                  <p className="text-text-muted">No specific services/inventory listed.</p>
+                )}
               </div>
             </section>
 
@@ -158,7 +227,7 @@ export function FacilityDetail() {
                 </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-0">
                 <ReviewCard
                   name="Mutoni K."
                   date="2 days ago"
