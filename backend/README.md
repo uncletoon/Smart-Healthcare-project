@@ -37,3 +37,6 @@ The API is structured around Django Rest Framework's DefaultRouter. All standard
   
 - **Facilities**: `/api/facilities/`
   - Manage facilities. Includes fields such as `company_name`, `company_logo` (image upload supported), contact details, precise location coordinates (`latitude`, `longitude`), and relationships to Categories (One-to-One), Locations (Foreign Key), Insurances (Many-to-Many), and Languages (Many-to-Many).
+
+- **Services**: `/api/services/`
+  - Manage custom services created by specific facilities. Includes fields such as `name`, `price`, `image`, `service_hours`, and relationships to `Facility` (Foreign Key), `Insurance` (Many-to-Many), and `Language` (Many-to-Many).
