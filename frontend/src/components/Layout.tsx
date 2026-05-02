@@ -4,7 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { MapPin, User, Menu, X } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
-import Switch from "./suitch";
+import Switch from "./Switch";
 
 const NAV_LINKS = [
   { name: "Find Care", href: "/services" },
