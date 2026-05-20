@@ -1,5 +1,6 @@
 import { Star, MapPin } from 'lucide-react';
 import { motion } from 'motion/react';
+import { Link } from 'react-router-dom';
 export interface Service {
   id: string | number;
   image: string;
@@ -58,12 +59,13 @@ export default function ServiceCard({ service }: ServiceCardProps) {
           >
             Book Appointment
           </button>
-          <button
-            className="w-full py-2.5 bg-white hover:bg-gray-50 text-[#1B4B36] border border-[#1B4B36] font-semibold rounded-lg transition-colors cursor-pointer"
+          <Link
+            to={`/services/${service.id}`}
+            className="w-full py-2.5 bg-white hover:bg-gray-50 text-[#1B4B36] border border-[#1B4B36] font-semibold rounded-lg transition-colors flex items-center justify-center cursor-pointer"
             id={`details-btn-${service.id}`}
           >
             View Details
-          </button>
+          </Link>
         </div>
       </div>
     </motion.div>

@@ -14,10 +14,28 @@ import {
   Info,
   Search,
   ShieldCheck,
+  Stethoscope
 } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "@/src/services/api";
 import { cn } from "@/src/lib/utils";
+
+const mockReviews = [
+  {
+    id: 1,
+    user: "Mutoni K.",
+    date: "2 days ago",
+    rating: 5,
+    comment: "The pharmacist was very helpful and explained exactly how to take my medication. They had everything in stock!"
+  },
+  {
+    id: 2,
+    user: "Jean N.",
+    date: "1 week ago",
+    rating: 5,
+    comment: "Clean facility and very organized. Appointment booking was seamless through the app."
+  }
+];
 
 export function FacilityDetail() {
   const { id } = useParams();
@@ -59,8 +77,7 @@ export function FacilityDetail() {
           id: s.id.toString(),
           name: s.name,
           category: 'Service',
-          dosage: 'N/A',
-          price: s.price || "N/A",
+          price: s.price || "Contact for Price",
         })));
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -146,7 +163,7 @@ export function FacilityDetail() {
                 <Calendar size={18} className="mr-2" /> Book Appointment
               </button>
               <button className="flex-1 md:flex-none bg-blue-500 text-white px-8 py-3 rounded-xl font-bold flex items-center justify-center hover:opacity-90 transition-all">
-                <Phone size={18} className="mr-2" /> Contact Pharmacy
+                <Phone size={18} className="mr-2" /> Contact Facility
               </button>
             </div>
           </div>
@@ -162,9 +179,9 @@ export function FacilityDetail() {
             <section>
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-display font-bold text-primary">
-                  Available Services & Inventory
+                  Available Services
                 </h2>
-                <div className="relative">
+                <div className="relative border border-gray-400 rounded-xl">
                   <Search
                     className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
                     size={18}
@@ -172,7 +189,7 @@ export function FacilityDetail() {
                   <input
                     type="text"
                     placeholder="Search services..."
-                    className="bg-surface border border-black/5 dark:border-white/5 rounded-xl pl-12 pr-6 py-3 text-sm outline-none focus:border-primary transition-colors"
+                    className="bg-surface border border-black/5 dark:border-white/5 rounded-xl pl-12 pr-6 py-3 text-sm outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -181,11 +198,11 @@ export function FacilityDetail() {
                 {services.map((med) => (
                   <div
                     key={med.id}
-                    className="bg-surface p-6 p-2 rounded-3xl border border-black/5 dark:border-white/5 flex items-center justify-between group hover:shadow-md transition-all"
+                    className="bg-surface p-3 rounded-3xl border border-black/5 dark:border-white/5 flex items-center justify-between group hover:shadow-md transition-all"
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center">
-                        <Pill className="text-primary" size={20} />
+                        <Stethoscope className="text-primary" size={20} />
                       </div>
                       <div>
                         <h4 className="font-bold text-primary">{med.name}</h4>
@@ -202,11 +219,11 @@ export function FacilityDetail() {
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-display font-bold text-primary mb-2">
-                        {parseFloat(med.price).toLocaleString()} RWF
+                        {isNaN(parseFloat(med.price)) ? "Contact for price" : `${parseFloat(med.price).toLocaleString()} RWF`}
                       </p>
-                      <button className="bg-secondary text-primary px-4 py-2 rounded-lg text-xs font-bold hover:bg-primary hover:text-white transition-all">
-                        Reserve/Book
-                      </button>
+                      <Link to={`/services/${med.id}`} className="inline-block bg-secondary text-primary px-4 py-2 rounded-lg text-xs font-bold hover:bg-primary hover:text-white transition-all">
+                        Read more
+                      </Link>
                     </div>
                   </div>
                 ))}
@@ -227,23 +244,31 @@ export function FacilityDetail() {
                 </button>
               </div>
 
-              <div className="space-y-0">
-                <ReviewCard
-                  name="Mutoni K."
-                  date="2 days ago"
-                  rating={5}
-                  title="Excellent Service"
-                  comment="The pharmacist was very helpful and explained exactly how to take my medication. They had everything in stock!"
-                  initials="MK"
-                />
-                <ReviewCard
-                  name="Jean N."
-                  date="1 week ago"
-                  rating={5}
-                  title="Reliable and Clean"
-                  comment="Clean facility and very organized. Appointment booking was seamless through the app."
-                  initials="JN"
-                />
+              <div className="space-y-4">
+                {mockReviews.map((review) => (
+                  <div key={review.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#1B4B36]/10 text-[#1B4B36] rounded-full flex items-center justify-center font-bold">
+                          {review.user.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-900">{review.user}</p>
+                          <p className="text-sm text-gray-500">{review.date}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-4 h-4 ${i < review.rating ? 'fill-[#F59E0B] text-[#F59E0B]' : 'text-gray-200 fill-gray-200'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-gray-600 italic">"{review.comment}"</p>
+                  </div>
+                ))}
               </div>
             </section>
           </div>
@@ -340,43 +365,4 @@ function InfoItem({ icon, label }: { icon: React.ReactNode; label: string }) {
   );
 }
 
-function ReviewCard({
-  name,
-  date,
-  rating,
-  title,
-  comment,
-  initials,
-}: {
-  name: string;
-  date: string;
-  rating: number;
-  title: string;
-  comment: string;
-  initials: string;
-}) {
-  return (
-    <div className="bg-surface p-8 rounded-[32px] border border-black/5 dark:border-white/5">
-      <div className="flex items-center gap-2 text-accent-dark mb-4">
-        {[...Array(rating)].map((_, i) => (
-          <Star key={i} size={16} fill="currentColor" />
-        ))}
-      </div>
-      <h4 className="font-bold text-primary mb-2">{title}</h4>
-      <p className="text-text-muted text-sm leading-relaxed mb-6 italic">
-        "{comment}"
-      </p>
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-bold text-xs">
-          {initials}
-        </div>
-        <div>
-          <p className="text-sm font-bold text-primary">{name}</p>
-          <p className="text-[10px] text-text-muted uppercase font-black tracking-widest">
-            {date}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
+

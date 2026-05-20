@@ -26,7 +26,7 @@ class Language(models.Model):
 
 class Facility(models.Model):
     company_name = models.CharField(max_length=255)
-    company_categories = models.OneToOneField(Category, on_delete=models.SET_NULL, null=True)
+    company_categories = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
     company_description = models.TextField(max_length=500, blank=False, null=False)
     company_logo = models.ImageField(upload_to='facility_logos/', blank=True, null=True)
     company_address = models.CharField(max_length=255, blank=False, null=False)
