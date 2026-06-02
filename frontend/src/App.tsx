@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Navbar, Footer } from "./components/Layout";
 import ScrollToTop from "./components/ScrollToTop";
 import { Home } from "./pages/Home";
+import { About } from "./pages/About";
 import { Medicines } from "./pages/Medicines";
 import { Services } from "./pages/Services";
 import { Facilities } from "./pages/Facilities";
@@ -33,7 +34,7 @@ export default function App() {
               <Route path="/services/:id" element={<ServiceDetail />} />
               <Route path="/facilities" element={<Facilities />} />
               <Route path="/facilities/:id" element={<FacilityDetail />} />
-              {/* Fallback for Emergency (could be a modal or separate page) */}
+              <Route path="/about" element={<About />} />
               <Route path="/emergency" element={<Services />} />
             </Routes>
           </main>

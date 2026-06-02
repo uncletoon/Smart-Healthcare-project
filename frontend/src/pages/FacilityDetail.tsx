@@ -19,6 +19,8 @@ import {
 import { motion } from "motion/react";
 import { api } from "@/src/services/api";
 import { cn } from "@/src/lib/utils";
+import { useGeolocation } from "@/src/hooks/useGeolocation";
+import { calculateDistance, getGoogleMapsUrl } from "@/src/lib/locationUtils";
 
 const mockReviews = [
   {
@@ -42,6 +44,7 @@ export function FacilityDetail() {
   const [facility, setFacility] = useState(null);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { latitude: userLat, longitude: userLng } = useGeolocation();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,7 +64,9 @@ export function FacilityDetail() {
           name: facilityData.company_name,
           type: category ? category.category_name : "Facility", // Map from API
           location: location ? location.location_name : facilityData.company_address || "Kigali",
-          distance: "2.5 km", // Static for now
+          latitude: facilityData.latitude,
+          longitude: facilityData.longitude,
+          address: facilityData.company_address,
           rating: 4.5, // Static for now
           reviews: 120, // Static for now
           status: "Open Now", // Static for now
@@ -119,7 +124,7 @@ export function FacilityDetail() {
         <div className="absolute top-6 left-6 bg-green-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg">
           Open Now
         </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent"></div>
         {/* <div className="absolute top-8 left-8">
           <span className="px-3 py-1 bg-secondary text-white text-[10px] font-bold rounded uppercase tracking-wider">
             Open Now
@@ -277,20 +282,34 @@ export function FacilityDetail() {
           <div className="space-y-8">
             {/* Map Card */}
             <div className="bg-surface p-8 rounded-[40px] shadow-xl">
-              <h3 className="font-bold text-primary mb-6">Location & Access</h3>
-              <div className="relative rounded-3xl overflow-hidden h-64 bg-secondary/30 mb-6">
-                {/* Mock Map */}
-                <img
-                  src="https://picsum.photos/seed/map/400/300"
-                  alt="Map"
-                  className="w-full h-full object-cover opacity-50"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center shadow-lg animate-bounce">
-                    <MapPin size={20} />
+              <h3 className="font-bold text-primary mb-6 flex justify-between items-center">
+                <span>Location & Access</span>
+                {facility.latitude && facility.longitude && (
+                  <span className="text-xs bg-secondary text-primary px-2.5 py-1 rounded-full font-bold">
+                    {calculateDistance(userLat, userLng, facility.latitude, facility.longitude)}
+                  </span>
+                )}
+              </h3>
+              <div className="relative rounded-3xl overflow-hidden h-64 bg-secondary/30 mb-6 group cursor-pointer">
+                <a
+                  href={getGoogleMapsUrl(facility.latitude, facility.longitude, facility.address, userLat, userLng)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full h-full"
+                >
+                  {/* Mock Map */}
+                  <img
+                    src="/satellite_view.png"
+                    alt="Map"
+                    className="w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-500"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center shadow-lg animate-bounce">
+                      <MapPin size={20} />
+                    </div>
                   </div>
-                </div>
+                </a>
               </div>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
@@ -317,6 +336,16 @@ export function FacilityDetail() {
                     </p>
                   </div>
                 </div>
+                
+                <a
+                  href={getGoogleMapsUrl(facility.latitude, facility.longitude, facility.address, userLat, userLng)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-primary text-white py-3 rounded-xl font-bold text-sm hover:bg-secondary hover:text-primary transition-all flex items-center justify-center"
+                >
+                  <MapPin size={16} className="mr-2" />
+                  View Map & Directions
+                </a>
               </div>
             </div>
 

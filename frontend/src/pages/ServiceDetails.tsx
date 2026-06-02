@@ -19,12 +19,15 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { api } from "../services/api";
+import { useGeolocation } from "../hooks/useGeolocation";
+import { calculateDistance, getGoogleMapsUrl } from "../lib/locationUtils";
 
 export default function ServiceDetail() {
   const { id } = useParams();
   const [serviceData, setServiceData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { latitude: userLat, longitude: userLng } = useGeolocation();
 
   useEffect(() => {
     const fetchServiceDetails = async () => {
@@ -68,7 +71,9 @@ export default function ServiceDetail() {
           facility: {
             name: facility ? facility.company_name : "Unknown Facility",
             location: locationName,
-            distance: "N/A",
+            latitude: facility ? facility.latitude : null,
+            longitude: facility ? facility.longitude : null,
+            address: facility ? facility.company_address : null,
             rating: 4.8,
             reviews: 156,
             image: facility && facility.company_logo ? facility.company_logo : "https://picsum.photos/seed/kigali-medical/800/600",
@@ -216,7 +221,7 @@ export default function ServiceDetail() {
                     key={idx}
                     className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-secondary transition-all group"
                   >
-                    <div className="w-8 h-8 mb-3 bg-white rounded-full flex items-center justify-center border border-gray-50 overflow-hidden group-hover:scale-110 transition-transform">
+                    <div className="w-8 h-8 mb-3 bg-white rounded-lg flex items-center justify-center border border-gray-50 overflow-hidden group-hover:scale-110 transition-transform">
                       {/* Using a placeholder icon/emoji since we don't have actual logos */}
                       <ShieldCheck className="text-primary/80" size={24} />
                     </div>
@@ -285,10 +290,10 @@ export default function ServiceDetail() {
                 <div className="flex items-center justify-between p-3 bg-secondary/60 rounded-xl">
                   <div className="flex items-center text-sm text-gray-600">
                     <Calendar size={18} className="mr-3 text-primary/80" />
-                    Available Date
+                    Available Day
                   </div>
                   <span className="text-sm font-bold text-gray-900">
-                    Today, Apr 21
+                    Mon-Sun
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-secondary/60 rounded-xl">
@@ -340,16 +345,32 @@ export default function ServiceDetail() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center text-xs text-black mb-6">
+                 <div className="flex items-center text-xs text-black mb-6">
                   <MapPin size={14} className="mr-2 text-primary/80" />
                   {SERVICE_DATA.facility.location} •{" "}
-                  {SERVICE_DATA.facility.distance}
+                  {calculateDistance(
+                    userLat,
+                    userLng,
+                    SERVICE_DATA.facility.latitude,
+                    SERVICE_DATA.facility.longitude
+                  )}
                 </div>
 
-                <button className="w-full bg-primary text-white py-3 rounded-xl font-bold text-sm hover:bg-secondary hover:text-primary transition-all flex items-center justify-center">
+                <a
+                  href={getGoogleMapsUrl(
+                    SERVICE_DATA.facility.latitude,
+                    SERVICE_DATA.facility.longitude,
+                    SERVICE_DATA.facility.address,
+                    userLat,
+                    userLng
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-primary text-white py-3 rounded-xl font-bold text-sm hover:bg-secondary hover:text-primary transition-all flex items-center justify-center"
+                >
                   <MapPin size={16} className="mr-2" />
                   View Map & Directions
-                </button>
+                </a>
               </div>
             </motion.div>
 
