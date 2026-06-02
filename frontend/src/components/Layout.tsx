@@ -41,7 +41,7 @@ export function Navbar() {
           to="/"
           className="text-2xl font-display font-bold text-white flex items-center gap-2"
         >
-          <span className="text-accent">Kizazi</span> Health
+          <span className="text-accent">Loca</span>Siyo
         </Link>
 
         {/* Desktop Nav */}
@@ -67,7 +67,7 @@ export function Navbar() {
             <MapPin size={18} />
             
           </button>
-          <Switch checked={isDarkMode} onChange={toggleDarkMode} />
+          {/* <Switch checked={isDarkMode} onChange={toggleDarkMode} /> */}
 
           <button className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
             <User size={20} />
@@ -87,7 +87,7 @@ export function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-primary-light border-t border-white/10 overflow-hidden"
+            className="md:hidden bg-primary border-t border-white/10 overflow-hidden"
           >
             <div className="container-custom py-6 flex flex-col gap-4">
               {NAV_LINKS.map((link) => (
@@ -124,7 +124,7 @@ export function Footer() {
       <div className="container-custom grid grid-cols-1 md:grid-cols-4 gap-12">
         <div className="col-span-1 md:col-span-1">
           <h3 className="text-xl font-display font-bold text-white mb-4">
-            Kizazi Health
+            Locasiyo
           </h3>
           <p className="text-white/80 text-sm leading-relaxed">
             Rwanda's leading healthcare resource network. Dedicated to
@@ -133,7 +133,7 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="font-bold text-primary mb-4">Resources</h4>
+          <h4 className="font-bold text-white mb-4">Resources</h4>
           <ul className="space-y-2 text-sm text-white/80">
             <li>
               <Link to="/facilities" className="hover:text-yellow-400">
@@ -154,11 +154,16 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="font-bold text-primary mb-4">Company</h4>
+          <h4 className="font-bold text-white mb-4">Company</h4>
           <ul className="space-y-2 text-sm text-white/80">
             <li>
               <Link to="#" className="hover:text-yellow-400">
                 Contact Us
+              </Link>
+            </li>
+             <li>
+              <Link to="/about" className="hover:text-yellow-400">
+                About
               </Link>
             </li>
             <li>
@@ -166,16 +171,12 @@ export function Footer() {
                 Terms of Service
               </Link>
             </li>
-            <li>
-              <Link to="#" className="hover:text-yellow-400">
-                Privacy Policy
-              </Link>
-            </li>
+           
           </ul>
         </div>
 
         <div>
-          <h4 className="font-bold text-primary mb-4">Regional</h4>
+          <h4 className="font-bold text-white mb-4">Regional</h4>
           <p className="text-sm text-white/80 mb-2">Language: English</p>
         </div>
       </div>

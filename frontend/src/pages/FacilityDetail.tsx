@@ -14,16 +14,37 @@ import {
   Info,
   Search,
   ShieldCheck,
+  Stethoscope
 } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "@/src/services/api";
 import { cn } from "@/src/lib/utils";
+import { useGeolocation } from "@/src/hooks/useGeolocation";
+import { calculateDistance, getGoogleMapsUrl } from "@/src/lib/locationUtils";
+
+const mockReviews = [
+  {
+    id: 1,
+    user: "Mutoni K.",
+    date: "2 days ago",
+    rating: 5,
+    comment: "The pharmacist was very helpful and explained exactly how to take my medication. They had everything in stock!"
+  },
+  {
+    id: 2,
+    user: "Jean N.",
+    date: "1 week ago",
+    rating: 5,
+    comment: "Clean facility and very organized. Appointment booking was seamless through the app."
+  }
+];
 
 export function FacilityDetail() {
   const { id } = useParams();
   const [facility, setFacility] = useState(null);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { latitude: userLat, longitude: userLng } = useGeolocation();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,7 +64,9 @@ export function FacilityDetail() {
           name: facilityData.company_name,
           type: category ? category.category_name : "Facility", // Map from API
           location: location ? location.location_name : facilityData.company_address || "Kigali",
-          distance: "2.5 km", // Static for now
+          latitude: facilityData.latitude,
+          longitude: facilityData.longitude,
+          address: facilityData.company_address,
           rating: 4.5, // Static for now
           reviews: 120, // Static for now
           status: "Open Now", // Static for now
@@ -59,8 +82,7 @@ export function FacilityDetail() {
           id: s.id.toString(),
           name: s.name,
           category: 'Service',
-          dosage: 'N/A',
-          price: s.price || "N/A",
+          price: s.price || "Contact for Price",
         })));
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -102,7 +124,7 @@ export function FacilityDetail() {
         <div className="absolute top-6 left-6 bg-green-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg">
           Open Now
         </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent"></div>
         {/* <div className="absolute top-8 left-8">
           <span className="px-3 py-1 bg-secondary text-white text-[10px] font-bold rounded uppercase tracking-wider">
             Open Now
@@ -146,7 +168,7 @@ export function FacilityDetail() {
                 <Calendar size={18} className="mr-2" /> Book Appointment
               </button>
               <button className="flex-1 md:flex-none bg-blue-500 text-white px-8 py-3 rounded-xl font-bold flex items-center justify-center hover:opacity-90 transition-all">
-                <Phone size={18} className="mr-2" /> Contact Pharmacy
+                <Phone size={18} className="mr-2" /> Contact Facility
               </button>
             </div>
           </div>
@@ -162,9 +184,9 @@ export function FacilityDetail() {
             <section>
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-display font-bold text-primary">
-                  Available Services & Inventory
+                  Available Services
                 </h2>
-                <div className="relative">
+                <div className="relative border border-gray-400 rounded-xl">
                   <Search
                     className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
                     size={18}
@@ -172,7 +194,7 @@ export function FacilityDetail() {
                   <input
                     type="text"
                     placeholder="Search services..."
-                    className="bg-surface border border-black/5 dark:border-white/5 rounded-xl pl-12 pr-6 py-3 text-sm outline-none focus:border-primary transition-colors"
+                    className="bg-surface border border-black/5 dark:border-white/5 rounded-xl pl-12 pr-6 py-3 text-sm outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -181,11 +203,11 @@ export function FacilityDetail() {
                 {services.map((med) => (
                   <div
                     key={med.id}
-                    className="bg-surface p-6 p-2 rounded-3xl border border-black/5 dark:border-white/5 flex items-center justify-between group hover:shadow-md transition-all"
+                    className="bg-surface p-3 rounded-3xl border border-black/5 dark:border-white/5 flex items-center justify-between group hover:shadow-md transition-all"
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center">
-                        <Pill className="text-primary" size={20} />
+                        <Stethoscope className="text-primary" size={20} />
                       </div>
                       <div>
                         <h4 className="font-bold text-primary">{med.name}</h4>
@@ -202,11 +224,11 @@ export function FacilityDetail() {
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-display font-bold text-primary mb-2">
-                        {parseFloat(med.price).toLocaleString()} RWF
+                        {isNaN(parseFloat(med.price)) ? "Contact for price" : `${parseFloat(med.price).toLocaleString()} RWF`}
                       </p>
-                      <button className="bg-secondary text-primary px-4 py-2 rounded-lg text-xs font-bold hover:bg-primary hover:text-white transition-all">
-                        Reserve/Book
-                      </button>
+                      <Link to={`/services/${med.id}`} className="inline-block bg-secondary text-primary px-4 py-2 rounded-lg text-xs font-bold hover:bg-primary hover:text-white transition-all">
+                        Read more
+                      </Link>
                     </div>
                   </div>
                 ))}
@@ -227,23 +249,31 @@ export function FacilityDetail() {
                 </button>
               </div>
 
-              <div className="space-y-0">
-                <ReviewCard
-                  name="Mutoni K."
-                  date="2 days ago"
-                  rating={5}
-                  title="Excellent Service"
-                  comment="The pharmacist was very helpful and explained exactly how to take my medication. They had everything in stock!"
-                  initials="MK"
-                />
-                <ReviewCard
-                  name="Jean N."
-                  date="1 week ago"
-                  rating={5}
-                  title="Reliable and Clean"
-                  comment="Clean facility and very organized. Appointment booking was seamless through the app."
-                  initials="JN"
-                />
+              <div className="space-y-4">
+                {mockReviews.map((review) => (
+                  <div key={review.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#1B4B36]/10 text-[#1B4B36] rounded-full flex items-center justify-center font-bold">
+                          {review.user.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-900">{review.user}</p>
+                          <p className="text-sm text-gray-500">{review.date}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-4 h-4 ${i < review.rating ? 'fill-[#F59E0B] text-[#F59E0B]' : 'text-gray-200 fill-gray-200'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-gray-600 italic">"{review.comment}"</p>
+                  </div>
+                ))}
               </div>
             </section>
           </div>
@@ -252,20 +282,34 @@ export function FacilityDetail() {
           <div className="space-y-8">
             {/* Map Card */}
             <div className="bg-surface p-8 rounded-[40px] shadow-xl">
-              <h3 className="font-bold text-primary mb-6">Location & Access</h3>
-              <div className="relative rounded-3xl overflow-hidden h-64 bg-secondary/30 mb-6">
-                {/* Mock Map */}
-                <img
-                  src="https://picsum.photos/seed/map/400/300"
-                  alt="Map"
-                  className="w-full h-full object-cover opacity-50"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center shadow-lg animate-bounce">
-                    <MapPin size={20} />
+              <h3 className="font-bold text-primary mb-6 flex justify-between items-center">
+                <span>Location & Access</span>
+                {facility.latitude && facility.longitude && (
+                  <span className="text-xs bg-secondary text-primary px-2.5 py-1 rounded-full font-bold">
+                    {calculateDistance(userLat, userLng, facility.latitude, facility.longitude)}
+                  </span>
+                )}
+              </h3>
+              <div className="relative rounded-3xl overflow-hidden h-64 bg-secondary/30 mb-6 group cursor-pointer">
+                <a
+                  href={getGoogleMapsUrl(facility.latitude, facility.longitude, facility.address, userLat, userLng)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full h-full"
+                >
+                  {/* Mock Map */}
+                  <img
+                    src="/satellite_view.png"
+                    alt="Map"
+                    className="w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-500"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center shadow-lg animate-bounce">
+                      <MapPin size={20} />
+                    </div>
                   </div>
-                </div>
+                </a>
               </div>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
@@ -292,6 +336,16 @@ export function FacilityDetail() {
                     </p>
                   </div>
                 </div>
+                
+                <a
+                  href={getGoogleMapsUrl(facility.latitude, facility.longitude, facility.address, userLat, userLng)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-primary text-white py-3 rounded-xl font-bold text-sm hover:bg-secondary hover:text-primary transition-all flex items-center justify-center"
+                >
+                  <MapPin size={16} className="mr-2" />
+                  View Map & Directions
+                </a>
               </div>
             </div>
 
@@ -340,43 +394,4 @@ function InfoItem({ icon, label }: { icon: React.ReactNode; label: string }) {
   );
 }
 
-function ReviewCard({
-  name,
-  date,
-  rating,
-  title,
-  comment,
-  initials,
-}: {
-  name: string;
-  date: string;
-  rating: number;
-  title: string;
-  comment: string;
-  initials: string;
-}) {
-  return (
-    <div className="bg-surface p-8 rounded-[32px] border border-black/5 dark:border-white/5">
-      <div className="flex items-center gap-2 text-accent-dark mb-4">
-        {[...Array(rating)].map((_, i) => (
-          <Star key={i} size={16} fill="currentColor" />
-        ))}
-      </div>
-      <h4 className="font-bold text-primary mb-2">{title}</h4>
-      <p className="text-text-muted text-sm leading-relaxed mb-6 italic">
-        "{comment}"
-      </p>
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-bold text-xs">
-          {initials}
-        </div>
-        <div>
-          <p className="text-sm font-bold text-primary">{name}</p>
-          <p className="text-[10px] text-text-muted uppercase font-black tracking-widest">
-            {date}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
+

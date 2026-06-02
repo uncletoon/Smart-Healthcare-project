@@ -14,10 +14,16 @@ import { motion } from "motion/react";
 import { api } from "@/src/services/api";
 import { cn } from "@/src/lib/utils";
 import { Link } from "react-router-dom";
+import { useGeolocation } from "@/src/hooks/useGeolocation";
+import { calculateDistance, getNumericDistance } from "@/src/lib/locationUtils";
 
 export function Facilities() {
   const [facilities, setFacilities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "distance">("name");
+
+  const { latitude: userLat, longitude: userLng } = useGeolocation();
 
   useEffect(() => {
     const fetchFacilities = async () => {
@@ -38,7 +44,9 @@ export function Facilities() {
             name: item.company_name,
             type: category ? category.category_name : "Facility", // Map from API
             location: location ? location.location_name : item.company_address || "Kigali",
-            distance: "2.5 km", // Static for now as requested
+            latitude: item.latitude,
+            longitude: item.longitude,
+            address: item.company_address,
             rating: 4.5, // Static for now
             reviews: 120, // Static for now
             status: "Open Now", // Static for now
@@ -59,6 +67,33 @@ export function Facilities() {
     fetchFacilities();
   }, []);
 
+  const processedFacilities = React.useMemo(() => {
+    let result = [...facilities];
+
+    if (searchQuery.trim() !== "") {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (f: any) =>
+          f.name.toLowerCase().includes(q) ||
+          f.type.toLowerCase().includes(q) ||
+          f.location.toLowerCase().includes(q) ||
+          (f.description && f.description.toLowerCase().includes(q))
+      );
+    }
+
+    if (sortBy === "distance" && userLat !== null && userLng !== null) {
+      result.sort((a: any, b: any) => {
+        const distA = getNumericDistance(userLat, userLng, a.latitude, a.longitude);
+        const distB = getNumericDistance(userLat, userLng, b.latitude, b.longitude);
+        return distA - distB;
+      });
+    } else {
+      result.sort((a: any, b: any) => a.name.localeCompare(b.name));
+    }
+
+    return result;
+  }, [facilities, searchQuery, sortBy, userLat, userLng]);
+
   return (
     <div className="bg-surface min-h-screen py-16">
       <div className="container-custom">
@@ -66,7 +101,7 @@ export function Facilities() {
           Healthcare Facilities
         </h1>
         <p className="text-text-muted mb-12">
-          Showing {facilities.length} results for pharmacies and clinics in Kigali
+          Showing {processedFacilities.length} results for pharmacies and clinics in Kigali
         </p>
 
         {/* Search & Filters */}
@@ -77,26 +112,36 @@ export function Facilities() {
               type="text"
               placeholder="Search by name, treatment, or specialty..."
               className="w-full py-3 outline-none text-primary"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <button className="bg-primary text-white px-6 py-2 rounded-xl font-bold text-sm">
+            {/* <button className="bg-primary text-white px-6 py-2 rounded-xl font-bold text-sm">
               Search
-            </button>
+            </button> */}
           </div>
           <div className="flex items-center gap-4">
             <button className="flex items-center gap-2 px-6 py-4 bg-surface border border-black/5 dark:border-white/5 rounded-2xl text-sm font-bold text-primary shadow-sm">
               <Filter size={18} /> Filter
             </button>
 
-            <button className="flex items-center gap-2 px-6 py-4 bg-surface border border-black/5 dark:border-white/5 rounded-2xl text-sm font-bold text-primary shadow-sm">
-              Sort by: <span className="font-black">Distance</span>{" "}
-              <ChevronDown size={18} />
+            <button
+              onClick={() => setSortBy(prev => prev === "distance" ? "name" : "distance")}
+              className={cn(
+                "flex items-center gap-2 px-6 py-4 border rounded-2xl text-sm font-bold shadow-sm transition-all",
+                sortBy === "distance"
+                  ? "bg-primary text-white border-primary"
+                  : "bg-surface text-primary border-black/5 dark:border-white/5"
+              )}
+            >
+              Sort by: <span className={cn("font-black", sortBy === "distance" ? "text-secondary" : "text-primary")}>Distance</span>{" "}
+              <ChevronDown size={18} className={cn("transition-transform", sortBy === "distance" && "rotate-180")} />
             </button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Sidebar Wellness Tip */}
-          <div className="bg-primary rounded-3xl p-6 text-white relative overflow-hidden h-fit lg:sticky lg:top-24">
+          <div className="hidden lg:block bg-primary rounded-3xl p-6 text-white relative overflow-hidden h-fit lg:sticky lg:top-24">
             <div className="relative z-10">
               <span className="text-[10px] font-bold tracking-[0.2em] uppercase opacity-70 mb-4 block">
                 Wellness Tip
@@ -129,7 +174,7 @@ export function Facilities() {
                   Regulates body temperature
                 </li>
               </ul>
-              <button className="w-full py-3 bg-surface text-primary rounded-xl font-bold text-sm hover:bg-black/5 dark:bg-white/10 transition-colors">
+              <button className="w-full py-3 bg-surface text-white rounded-xl font-bold text-sm hover:bg-black/8 dark:bg-white/10 transition-colors">
                 Learn More →
               </button>
             </div>
@@ -141,12 +186,12 @@ export function Facilities() {
               <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
               </div>
-            ) : facilities.length === 0 ? (
+            ) : processedFacilities.length === 0 ? (
               <div className="text-center text-text-muted py-12">
                 No facilities found.
               </div>
             ) : (
-              facilities.map((facility, idx) => (
+              processedFacilities.map((facility: any, idx) => (
                 <motion.div
                   key={facility.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -176,6 +221,12 @@ export function Facilities() {
                             </span>
                             <p className="text-text-muted text-xs flex items-center gap-1">
                               <MapPin size={12} /> {facility.location}
+                              {facility.latitude && facility.longitude && (
+                                <>
+                                  <span className="mx-1.5">•</span>
+                                  <span>{calculateDistance(userLat, userLng, facility.latitude, facility.longitude)}</span>
+                                </>
+                              )}
                             </p>
                           </div>
                         </div>
