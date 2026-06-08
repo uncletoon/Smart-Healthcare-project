@@ -1,10 +1,32 @@
 import React, { useState, useEffect } from "react";
 import SearchSection from "../components/SearchSection";
-import ServiceCard from "../components/ServiceCard";
+import ServiceCard, { Service as ServiceCardType } from "../components/ServiceCard";
 import { api } from "@/src/services/api";
 
+interface ServiceApi {
+  id: number;
+  name: string;
+  facility: number;
+  image?: string;
+  [key: string]: any;
+}
+
+interface FacilityApi {
+  id: number;
+  company_name: string;
+  location: number;
+  company_address?: string;
+  [key: string]: any;
+}
+
+interface LocationApi {
+  id: number;
+  location_name: string;
+  [key: string]: any;
+}
+
 export function Services() {
-  const [services, setServices] = useState([]);
+  const [services, setServices] = useState<ServiceCardType[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -14,14 +36,14 @@ export function Services() {
           api.getServices(),
           api.getFacilities(),
           api.getLocations()
-        ]);
+        ]) as [ServiceApi[], FacilityApi[], LocationApi[]];
         
-        const mappedData = data.map((item) => {
-          const facility = facilitiesData.find(f => f.id === item.facility);
+        const mappedData = data.map((item: ServiceApi) => {
+          const facility = facilitiesData.find((f) => f.id === item.facility);
           let locationName = "Kigali";
           
           if (facility) {
-            const loc = locationsData.find(l => l.id === facility.location);
+            const loc = locationsData.find((l) => l.id === facility.location);
             locationName = loc ? loc.location_name : facility.company_address || "Kigali";
           }
           
@@ -72,7 +94,7 @@ export function Services() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {services.map((service) => (
-              <ServiceCard key={service.id} service={service} />
+              <ServiceCard key={String(service.id)} service={service} />
             ))}
           </div>
         )}

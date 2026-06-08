@@ -17,8 +17,51 @@ import { Link } from "react-router-dom";
 import { useGeolocation } from "@/src/hooks/useGeolocation";
 import { calculateDistance, getNumericDistance } from "@/src/lib/locationUtils";
 
+interface FacilityApi {
+  id: number;
+  company_categories: number;
+  company_name: string;
+  company_address?: string;
+  company_description?: string;
+  company_logo?: string;
+  location: number;
+  latitude?: number;
+  longitude?: number;
+  hours?: string;
+  [key: string]: any;
+}
+
+interface CategoryApi {
+  id: number;
+  category_name: string;
+  [key: string]: any;
+}
+
+interface LocationApi {
+  id: number;
+  location_name: string;
+  [key: string]: any;
+}
+
+interface FacilityItem {
+  id: string;
+  name: string;
+  type: string;
+  location: string;
+  latitude?: number;
+  longitude?: number;
+  address?: string;
+  rating: number;
+  reviews: number;
+  status: string;
+  hours: string;
+  description?: string;
+  image: string;
+  services: string[];
+}
+
 export function Facilities() {
-  const [facilities, setFacilities] = useState([]);
+  const [facilities, setFacilities] = useState<FacilityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "distance">("name");
@@ -32,12 +75,12 @@ export function Facilities() {
           api.getFacilities(),
           api.getCategories(),
           api.getLocations()
-        ]);
+        ]) as [FacilityApi[], CategoryApi[], LocationApi[]];
         
         // Map backend data to frontend shape
-        const mappedData = data.map((item) => {
-          const category = categoriesData.find(c => c.id === item.company_categories);
-          const location = locationsData.find(l => l.id === item.location);
+        const mappedData = data.map((item: FacilityApi) => {
+          const category = categoriesData.find((c) => c.id === item.company_categories);
+          const location = locationsData.find((l) => l.id === item.location);
           
           return {
             id: item.id.toString(),
@@ -72,12 +115,11 @@ export function Facilities() {
 
     if (searchQuery.trim() !== "") {
       const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (f: any) =>
-          f.name.toLowerCase().includes(q) ||
-          f.type.toLowerCase().includes(q) ||
-          f.location.toLowerCase().includes(q) ||
-          (f.description && f.description.toLowerCase().includes(q))
+      result = result.filter((f: FacilityItem) =>
+        f.name.toLowerCase().includes(q) ||
+        f.type.toLowerCase().includes(q) ||
+        f.location.toLowerCase().includes(q) ||
+        (f.description && f.description.toLowerCase().includes(q))
       );
     }
 
