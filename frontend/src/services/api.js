@@ -63,4 +63,17 @@ export const api = {
   getLanguages: async () => {
     return await fetchApi("/languages/");
   },
+
+  // Medicines
+  getMedicines: async () => {
+    return await fetchApi("/medicines/");
+  },
+  getMedicine: async (id) => {
+    return await fetchApi(`/medicines/${id}/`);
+  },
+
+  // Medicine Categories
+  getMedicineCategories: async () => {
+    return await fetchApi("/medicine-categories/");
+  },
 };
