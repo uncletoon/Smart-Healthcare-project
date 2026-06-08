@@ -12,7 +12,6 @@ export interface Service {
 
 interface ServiceCardProps {
   service: Service;
-  key?: string;
 }
 
 export default function ServiceCard({ service }: ServiceCardProps) {
