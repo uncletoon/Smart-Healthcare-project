@@ -49,6 +49,11 @@ export const api = {
     return await fetchApi("/categories/");
   },
 
+  // Service Categories
+  getServiceCategories: async () => {
+    return await fetchApi("/servicecategories/");
+  },
+
   // Locations
   getLocations: async () => {
     return await fetchApi("/locations/");

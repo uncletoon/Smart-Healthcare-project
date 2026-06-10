@@ -39,9 +39,9 @@ export function Navbar() {
       <div className="container-custom py-4 flex items-center justify-between">
         <Link
           to="/"
-          className="text-2xl font-display font-bold text-white flex items-center gap-2"
+          className="flex items-center gap-2"
         >
-          <span className="text-accent">Loca</span>Siyo
+          <img src="/LOGO.png" alt="Locasiyo" className="h-8 md:h-10 w-auto object-contain" />
         </Link>
 
         {/* Desktop Nav */}
@@ -123,9 +123,9 @@ export function Footer() {
     <footer className="bg-primary pt-16 pb-8 border-t border-gray-200">
       <div className="container-custom grid grid-cols-1 md:grid-cols-4 gap-12">
         <div className="col-span-1 md:col-span-1">
-          <h3 className="text-xl font-display font-bold text-white mb-4">
-            Locasiyo
-          </h3>
+          <div className="mb-4">
+            <img src="/LOGO.png" alt="Locasiyo Logo" className="h-8 md:h-10 w-auto object-contain" />
+          </div>
           <p className="text-white/80 text-sm leading-relaxed">
             Rwanda's leading healthcare resource network. Dedicated to
             transparency and accessibility in medical care.
