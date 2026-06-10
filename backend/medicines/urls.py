@@ -4,7 +4,7 @@ from .views import (MedicineViewSet, MedicineCategoryViewSet)
 
 router = DefaultRouter()
 router.register(r'medicines', MedicineViewSet)
-router.register(r'medicinescategory', MedicineCategoryViewSet)
+router.register(r'medicinecategories', MedicineCategoryViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

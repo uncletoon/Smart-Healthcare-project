@@ -12,7 +12,7 @@ from facilities.views import (
     CategoryViewSet, LocationViewSet, InsuranceViewSet,
     LanguageViewSet, FacilityViewSet,
 )
-from services_app.views import ServiceViewSet
+from services_app.views import ServiceViewSet, ServiceCategoryViewSet
 from medicines.views import MedicineViewSet, MedicineCategoryViewSet
 
 router = DefaultRouter()
@@ -22,6 +22,7 @@ router.register(r'insurances', InsuranceViewSet)
 router.register(r'languages', LanguageViewSet)
 router.register(r'facilities', FacilityViewSet)
 router.register(r'services', ServiceViewSet)
+router.register(r'servicecategories', ServiceCategoryViewSet)
 router.register(r'medicine-categories', MedicineCategoryViewSet)
 router.register(r'medicines', MedicineViewSet)
 

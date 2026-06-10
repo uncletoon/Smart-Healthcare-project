@@ -1,7 +1,14 @@
 from django.db import models
 
+class ServiceCategory(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __str__(self) :
+        return self.name
+
 class Service(models.Model):
     facility = models.ForeignKey('facilities.Facility', on_delete=models.CASCADE, related_name='services')
+    category = models.ForeignKey('ServiceCategory',null=True, on_delete=models.SET_NULL, related_name='service')
     name = models.CharField(max_length=255)
     description = models.TextField(max_length=500, blank=False, null=False)
     image = models.ImageField(upload_to='services/', default='services/default.jpg', blank=True, null=True)
