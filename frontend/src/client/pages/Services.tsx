@@ -21,6 +21,8 @@ interface FacilityApi {
   location: number;
   company_address?: string;
   company_categories?: number;
+  latitude?: number | null;
+  longitude?: number | null;
   [key: string]: any;
 }
 
@@ -99,10 +101,11 @@ export function Services() {
               item.image ||
               "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800",
             title: item.name,
-            clinic: facility ? facility.company_name : "Facility", // Maps to 'clinic' for ServiceCard
+            clinic: facility ? facility.company_name : "Facility",
             location: locationName,
-            rating: 4.5,
-            
+            latitude: facility?.latitude ?? null,
+            longitude: facility?.longitude ?? null,
+
             // Filtering attributes
             locationId: facility ? facility.location : undefined,
             serviceCategoryId: item.category,

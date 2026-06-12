@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { api } from "../services/api";
-import { useGeolocation } from "../hooks/useGeolocation";
-import { calculateDistance, getGoogleMapsUrl } from "../lib/locationUtils";
+import DistanceBadge, { useGeolocation } from "../components/DistanceBadge";
+import { getGoogleMapsUrl } from "../lib/locationUtils";
 
 type InsuranceItem = {
   name: string;
@@ -227,14 +227,21 @@ export default function ServiceDetail() {
                   <h1 className="text-4xl md:text-5xl font-bold text-primary mb-4">
                     {SERVICE_DATA.title}
                   </h1>
-                  <div className="flex flex-wrap items-center gap-6 text-sm text-primary">
-                    <div className="flex items-center">
-                      <Clock size={16} className="text-primary mr-2" />
-                      {SERVICE_DATA.duration}
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-primary">
+                    <div className="flex items-center gap-2">
+                      <Clock size={16} className="text-primary" />
+                      <span>{SERVICE_DATA.duration}</span>
                     </div>
-                    <div className="flex items-center">
-                      <MapPin size={16} className="text-primary mr-2" />
-                      {SERVICE_DATA.facility.location}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <MapPin size={16} className="text-primary" />
+                        <span>{SERVICE_DATA.facility.location}</span>
+                      </div>
+                      <DistanceBadge
+                        latitude={SERVICE_DATA.facility.latitude}
+                        longitude={SERVICE_DATA.facility.longitude}
+                        className="text-xs px-2 py-1"
+                      />
                     </div>
                     {/* <div className="flex items-center">
                       <ShieldCheck size={16} className="text-secondary mr-2" />
@@ -413,13 +420,7 @@ export default function ServiceDetail() {
                 </div>
                 <div className="flex items-center text-xs text-black mb-6">
                   <MapPin size={14} className="mr-2 text-primary/80" />
-                  {SERVICE_DATA.facility.location} •{" "}
-                  {calculateDistance(
-                    userLat,
-                    userLng,
-                    SERVICE_DATA.facility.latitude,
-                    SERVICE_DATA.facility.longitude,
-                  )}
+                  {SERVICE_DATA.facility.location}
                 </div>
 
                 <a

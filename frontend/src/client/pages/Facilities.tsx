@@ -14,8 +14,8 @@ import { motion } from "motion/react";
 import { api } from "@/src/client/services/api";
 import { cn } from "@/src/client/lib/utils";
 import { Link } from "react-router-dom";
-import { useGeolocation } from "@/src/client/hooks/useGeolocation";
-import { calculateDistance, getNumericDistance } from "@/src/client/lib/locationUtils";
+import DistanceBadge, { useGeolocation } from "@/src/client/components/DistanceBadge";
+import { getNumericDistance } from "@/src/client/lib/locationUtils";
 
 interface FacilityApi {
   id: number;
@@ -71,22 +71,26 @@ export function Facilities() {
   useEffect(() => {
     const fetchFacilities = async () => {
       try {
-        const [data, categoriesData, locationsData] = await Promise.all([
+        const [data, categoriesData, locationsData] = (await Promise.all([
           api.getFacilities(),
           api.getCategories(),
-          api.getLocations()
-        ]) as [FacilityApi[], CategoryApi[], LocationApi[]];
-        
+          api.getLocations(),
+        ])) as [FacilityApi[], CategoryApi[], LocationApi[]];
+
         // Map backend data to frontend shape
         const mappedData = data.map((item: FacilityApi) => {
-          const category = categoriesData.find((c) => c.id === item.company_categories);
+          const category = categoriesData.find(
+            (c) => c.id === item.company_categories,
+          );
           const location = locationsData.find((l) => l.id === item.location);
-          
+
           return {
             id: item.id.toString(),
             name: item.company_name,
             type: category ? category.category_name : "Facility", // Map from API
-            location: location ? location.location_name : item.company_address || "Kigali",
+            location: location
+              ? location.location_name
+              : item.company_address || "Kigali",
             latitude: item.latitude,
             longitude: item.longitude,
             address: item.company_address,
@@ -95,7 +99,9 @@ export function Facilities() {
             status: "Open Now", // Static for now
             hours: item.hours || "24/7", // Coming from API
             description: item.company_description,
-            image: item.company_logo || "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800",
+            image:
+              item.company_logo ||
+              "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800",
             services: [],
           };
         });
@@ -115,18 +121,29 @@ export function Facilities() {
 
     if (searchQuery.trim() !== "") {
       const q = searchQuery.toLowerCase();
-      result = result.filter((f: FacilityItem) =>
-        f.name.toLowerCase().includes(q) ||
-        f.type.toLowerCase().includes(q) ||
-        f.location.toLowerCase().includes(q) ||
-        (f.description && f.description.toLowerCase().includes(q))
+      result = result.filter(
+        (f: FacilityItem) =>
+          f.name.toLowerCase().includes(q) ||
+          f.type.toLowerCase().includes(q) ||
+          f.location.toLowerCase().includes(q) ||
+          (f.description && f.description.toLowerCase().includes(q)),
       );
     }
 
     if (sortBy === "distance" && userLat !== null && userLng !== null) {
       result.sort((a: any, b: any) => {
-        const distA = getNumericDistance(userLat, userLng, a.latitude, a.longitude);
-        const distB = getNumericDistance(userLat, userLng, b.latitude, b.longitude);
+        const distA = getNumericDistance(
+          userLat,
+          userLng,
+          a.latitude,
+          a.longitude,
+        );
+        const distB = getNumericDistance(
+          userLat,
+          userLng,
+          b.latitude,
+          b.longitude,
+        );
         return distA - distB;
       });
     } else {
@@ -143,7 +160,8 @@ export function Facilities() {
           Healthcare Facilities
         </h1>
         <p className="text-text-muted mb-12">
-          Showing {processedFacilities.length} results for pharmacies and clinics in Kigali
+          Showing {processedFacilities.length} results for pharmacies and
+          clinics in Kigali
         </p>
 
         {/* Search & Filters */}
@@ -167,16 +185,32 @@ export function Facilities() {
             </button>
 
             <button
-              onClick={() => setSortBy(prev => prev === "distance" ? "name" : "distance")}
+              onClick={() =>
+                setSortBy((prev) => (prev === "distance" ? "name" : "distance"))
+              }
               className={cn(
                 "flex items-center gap-2 px-6 py-4 border rounded-2xl text-sm font-bold shadow-sm transition-all",
                 sortBy === "distance"
                   ? "bg-primary text-white border-primary"
-                  : "bg-surface text-primary border-black/5 dark:border-white/5"
+                  : "bg-surface text-primary border-black/5 dark:border-white/5",
               )}
             >
-              Sort by: <span className={cn("font-black", sortBy === "distance" ? "text-secondary" : "text-primary")}>Distance</span>{" "}
-              <ChevronDown size={18} className={cn("transition-transform", sortBy === "distance" && "rotate-180")} />
+              Sort by:{" "}
+              <span
+                className={cn(
+                  "font-black",
+                  sortBy === "distance" ? "text-secondary" : "text-primary",
+                )}
+              >
+                Distance
+              </span>{" "}
+              <ChevronDown
+                size={18}
+                className={cn(
+                  "transition-transform",
+                  sortBy === "distance" && "rotate-180",
+                )}
+              />
             </button>
           </div>
         </div>
@@ -261,13 +295,14 @@ export function Facilities() {
                             <span className="bg-secondary text-primary text-[10px] font-black px-2 py-1 rounded tracking-widest uppercase">
                               {facility.type}
                             </span>
-                            <p className="text-text-muted text-xs flex items-center gap-1">
-                              <MapPin size={12} /> {facility.location}
+                            <p className="text-primary text-[14px] font-bold flex flex-wrap items-center gap-2">
+                              <MapPin size={14} /> {facility.location}
                               {facility.latitude && facility.longitude && (
-                                <>
-                                  <span className="mx-1.5">•</span>
-                                  <span>{calculateDistance(userLat, userLng, facility.latitude, facility.longitude)}</span>
-                                </>
+                                <DistanceBadge
+                                  latitude={facility.latitude}
+                                  longitude={facility.longitude}
+                                  className="text-xs px-2 py-1"
+                                />
                               )}
                             </p>
                           </div>

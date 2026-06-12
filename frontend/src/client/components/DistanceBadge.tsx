@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { Navigation } from "lucide-react";
+import { calculateDistance } from "@/src/client/lib/locationUtils";
 
 export interface GeolocationState {
   latitude: number | null;
@@ -64,4 +66,52 @@ export function useGeolocation() {
   }, []);
 
   return state;
+}
+
+interface DistanceBadgeProps {
+  latitude: number | null | undefined;
+  longitude: number | null | undefined;
+  className?: string;
+}
+
+/**
+ * Reusable badge that displays the distance from the user's current location
+ * to a given set of coordinates. Shows a loading dot while geolocation resolves,
+ * and gracefully falls back to nothing if coordinates are unavailable.
+ */
+export default function DistanceBadge({
+  latitude,
+  longitude,
+  className = "",
+}: DistanceBadgeProps) {
+  const { latitude: userLat, longitude: userLng, loading } = useGeolocation();
+
+  // Don't render anything if the target has no coordinates
+  if (
+    latitude === null ||
+    latitude === undefined ||
+    longitude === null ||
+    longitude === undefined
+  ) {
+    return null;
+  }
+
+  const distance = calculateDistance(userLat, userLng, latitude, longitude);
+
+  return (
+    <div
+      className={`flex items-center gap-2 shrink-0 text-sm font-semibold px-3 py-1.5 rounded-full bg-secondary border border-primary/30 shadow-lg ${className}`}
+      style={{
+        boxShadow:
+          "0 0 16px rgba(0, 77, 64, 0.35), 0 4px 8px rgba(0, 77, 64, 0.15)",
+      }}
+    >
+      <Navigation className="w-4 h-4 text-primary" />
+      {loading ? (
+        <span className="text-gray-400 animate-pulse">…</span>
+      ) : (
+        <span className="text-primary">{distance}</span>
+      )}
+    </div>
+  );
 }

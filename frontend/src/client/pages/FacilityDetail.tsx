@@ -19,11 +19,8 @@ import {
 import { motion } from "motion/react";
 import { api } from "@/src/client/services/api";
 import { cn } from "@/src/client/lib/utils";
-import { useGeolocation } from "@/src/client/hooks/useGeolocation";
-import {
-  calculateDistance,
-  getGoogleMapsUrl,
-} from "@/src/client/lib/locationUtils";
+import { getGoogleMapsUrl } from "@/src/client/lib/locationUtils";
+import DistanceBadge, { useGeolocation } from "@/src/client/components/DistanceBadge";
 
 type Facility = {
   id: string;
@@ -353,19 +350,13 @@ export function FacilityDetail() {
           <div className="space-y-8">
             {/* Map Card */}
             <div className="bg-surface p-8 rounded-[40px] shadow-xl">
-              <h3 className="font-bold text-primary mb-6 flex justify-between items-center">
-                <span>Location & Access</span>
-                {facility.latitude && facility.longitude && (
-                  <span className="text-xs bg-secondary text-primary px-2.5 py-1 rounded-full font-bold">
-                    {calculateDistance(
-                      userLat,
-                      userLng,
-                      facility.latitude,
-                      facility.longitude,
-                    )}
-                  </span>
-                )}
-              </h3>
+              <div className="flex flex-wrap items-center gap-3 justify-between mb-6">
+                <h3 className="font-bold text-primary">Location & Access</h3>
+                <DistanceBadge
+                  latitude={facility.latitude}
+                  longitude={facility.longitude}
+                />
+              </div>
               <div className="relative rounded-3xl overflow-hidden h-64 bg-secondary/30 mb-6 group cursor-pointer">
                 <a
                   href={getGoogleMapsUrl(

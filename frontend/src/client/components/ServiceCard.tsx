@@ -1,13 +1,16 @@
-import { Star, MapPin } from 'lucide-react';
-import { motion } from 'motion/react';
-import { Link } from 'react-router-dom';
+import { MapPin, Building2 } from "lucide-react";
+import { motion } from "motion/react";
+import { Link } from "react-router-dom";
+import DistanceBadge from "./DistanceBadge";
+
 export interface Service {
   id: string | number;
   image: string;
   title: string;
-  rating: number | string;
   clinic: string;
   location: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface ServiceCardProps {
@@ -23,6 +26,10 @@ export default function ServiceCard({ service }: ServiceCardProps) {
       viewport={{ once: true }}
       className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex flex-col h-full"
       id={`service-card-${service.id}`}
+      style={{
+        boxShadow:
+          "0 0 16px rgba(0, 77, 64, 0.35), 0 4px 8px rgba(0, 77, 64, 0.15)",
+      }}
     >
       <div className="relative aspect-4/3 overflow-hidden">
         <img
@@ -34,21 +41,24 @@ export default function ServiceCard({ service }: ServiceCardProps) {
       </div>
 
       <div className="p-5 flex flex-col grow">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-bold text-gray-900 leading-tight">
-            {service.title}
-          </h3>
-          <div className="flex items-center gap-1 shrink-0">
-            <Star className="w-4 h-4 fill-[#F59E0B] text-[#F59E0B]" />
-            <span className="text-sm font-semibold text-gray-700">{service.rating}</span>
-          </div>
+        <h3 className="text-lg font-bold text-primary leading-tight mb-4">
+          {service.title}
+        </h3>
+
+        <div className="flex items-center gap-1 text-primary text-sm mb-2">
+          <Building2 className="w-4 h-4 text-primary" />
+          <span>{service.clinic}</span>
         </div>
 
-        <p className="text-gray-600 text-sm mb-2">{service.clinic}</p>
-
-        <div className="flex items-center gap-1 text-gray-500 text-sm mb-6">
-          <MapPin className="w-4 h-4" />
-          <span>{service.location}</span>
+        <div className="flex items-center justify-between gap-2 text-primary text-sm mb-6">
+          <div className="flex items-center gap-1">
+            <MapPin className="w-4 h-4 text-primary" />
+            <span>{service.location}</span>
+          </div>
+          <DistanceBadge
+            latitude={service.latitude}
+            longitude={service.longitude}
+          />
         </div>
 
         <div className="mt-auto space-y-2">
