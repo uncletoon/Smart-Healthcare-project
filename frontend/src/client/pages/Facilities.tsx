@@ -250,7 +250,7 @@ export function Facilities() {
                   Regulates body temperature
                 </li>
               </ul>
-              <button className="w-full py-3 bg-surface text-white rounded-xl font-bold text-sm hover:bg-black/8 dark:bg-white/10 transition-colors">
+              <button className="w-full py-3 bg-black/20 border border-white text-white rounded-xl font-bold text-sm hover:bg-green-900 dark:bg-white/10 transition-colors">
                 Learn More →
               </button>
             </div>

@@ -81,4 +81,12 @@ export const api = {
   getMedicineCategories: async () => {
     return await fetchApi("/medicine-categories/");
   },
+
+  // Bookings
+  createBooking: async (bookingData) => {
+    return await fetchApi("/bookings/", {
+      method: "POST",
+      body: JSON.stringify(bookingData),
+    });
+  },
 };

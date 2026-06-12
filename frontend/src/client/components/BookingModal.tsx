@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Modal } from "./modal/model";
 import { Calendar, Phone, CheckCircle2, User, AlertCircle, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { api } from "../services/api";
 
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   serviceName: string;
+  serviceId: string | number;
   requirements: string[];
 }
 
@@ -14,6 +16,7 @@ export default function BookingModal({
   isOpen,
   onClose,
   serviceName,
+  serviceId,
   requirements = [],
 }: BookingModalProps) {
   // Form fields matching Django Booking model fields
@@ -24,6 +27,8 @@ export default function BookingModal({
 
   const [confirmRequirements, setConfirmRequirements] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Reset states when modal closes or opens
   useEffect(() => {
@@ -34,6 +39,8 @@ export default function BookingModal({
       setNotes("");
       setConfirmRequirements(false);
       setIsSubmitted(false);
+      setIsLoading(false);
+      setErrorMsg(null);
     }
   }, [isOpen]);
 
@@ -47,11 +54,40 @@ export default function BookingModal({
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!confirmRequirements) return;
-    // Simulate successful booking
-    setIsSubmitted(true);
+
+    if (patientName.trim().length <= 5) {
+      setErrorMsg("Patient name must be more than 5 characters.");
+      return;
+    }
+    if (phone.trim().length < 10) {
+      setErrorMsg("Phone number must be 10 or more digits.");
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMsg(null);
+
+    try {
+      await api.createBooking({
+        patient_name: patientName,
+        service: serviceId,
+        date_time: dateTime,
+        phone: phone,
+        notes: notes,
+        status: "Pending",
+      });
+      setIsSubmitted(true);
+    } catch (err: any) {
+      console.error("Failed to create booking:", err);
+      setErrorMsg(
+        err?.message || "Failed to submit appointment. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const defaultRequirements = [
@@ -134,6 +170,7 @@ export default function BookingModal({
                       <input
                         type="text"
                         required={confirmRequirements}
+                        minLength={6}
                         value={patientName}
                         onChange={(e) => setPatientName(e.target.value)}
                         placeholder="John Doe"
@@ -155,9 +192,10 @@ export default function BookingModal({
                         <input
                           type="tel"
                           required={confirmRequirements}
+                          minLength={10}
                           value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="+250 788 000 000"
+                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                          placeholder="788000000"
                           className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-gray-800 dark:text-white transition"
                         />
                       </div>
@@ -203,22 +241,34 @@ export default function BookingModal({
                   </div>
                 </div>
 
+                {errorMsg && (
+                  <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-xl p-4 flex items-start gap-3 text-red-600 dark:text-red-400 text-xs">
+                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                    <span>{errorMsg}</span>
+                  </div>
+                )}
+
                 {/* Footer Buttons */}
                 <div className="flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
                   <button
                     type="button"
                     onClick={onClose}
-                    className="flex-1 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-bold text-sm transition"
+                    disabled={isLoading}
+                    className="flex-1 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-bold text-sm transition disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={!confirmRequirements}
+                    disabled={!confirmRequirements || isLoading}
                     className="flex-1 bg-primary text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-45 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    <Calendar size={18} />
-                    Confirm
+                    {isLoading ? (
+                      <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    ) : (
+                      <Calendar size={18} />
+                    )}
+                    {isLoading ? "Booking..." : "Confirm"}
                   </button>
                 </div>
               </form>

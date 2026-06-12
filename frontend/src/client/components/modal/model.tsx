@@ -41,7 +41,7 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 md:p-10 z-[99999]">
+    <div className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 md:p-10 z-99999">
       {/* Dimmed backdrop overlay with 6px blur */}
       <div
         className="fixed inset-0 h-full w-full bg-gray-950/40 backdrop-blur-[6px]"

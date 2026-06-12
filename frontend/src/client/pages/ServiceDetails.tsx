@@ -465,6 +465,7 @@ export default function ServiceDetail() {
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
         serviceName={SERVICE_DATA.title}
+        serviceId={SERVICE_DATA.id}
         requirements={SERVICE_DATA.requirements}
       />
     </div>
