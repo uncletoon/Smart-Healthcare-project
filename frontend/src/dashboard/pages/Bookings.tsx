@@ -248,8 +248,8 @@ export default function Bookings() {
                         {booking.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400 text-theme-xs max-w-xs truncate" title={booking.notes}>
-                      {booking.notes}
+                    <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400 text-theme-xs max-w-xs truncate">
+                      <span title={booking.notes}>{booking.notes}</span>
                     </TableCell>
                     <TableCell className="px-5 py-4">
                       <div className="flex items-center justify-center gap-2">

@@ -2,7 +2,13 @@ import { useState } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
 import Badge from "../components/ui/badge/Badge";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "../components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "../components/ui/table";
 import { Search, Plus, Trash2, Edit, CheckCircle } from "lucide-react";
 import { Modal } from "../components/ui/modal";
 import Button from "../components/ui/button/Button";
@@ -27,7 +33,8 @@ const initialServices: ServiceItem[] = [
     cost: "10,000 RWF",
     duration: "20 mins",
     status: "Active",
-    description: "Routine primary care checkup, vitals screening, and general medical advice.",
+    description:
+      "Routine primary care checkup, vitals screening, and general medical advice.",
   },
   {
     id: "2",
@@ -36,7 +43,8 @@ const initialServices: ServiceItem[] = [
     cost: "15,000 RWF",
     duration: "15 mins",
     status: "Active",
-    description: "Full hematology blood screening panel performed by lab technicians.",
+    description:
+      "Full hematology blood screening panel performed by lab technicians.",
   },
   {
     id: "3",
@@ -45,7 +53,8 @@ const initialServices: ServiceItem[] = [
     cost: "30,000 RWF",
     duration: "10 mins",
     status: "Active",
-    description: "Standard nasal swab molecular test with digital certificate delivery.",
+    description:
+      "Standard nasal swab molecular test with digital certificate delivery.",
   },
   {
     id: "4",
@@ -54,7 +63,8 @@ const initialServices: ServiceItem[] = [
     cost: "8,000 RWF",
     duration: "10 mins",
     status: "Active",
-    description: "Annual influenza immunization shot administered by nursing staff.",
+    description:
+      "Annual influenza immunization shot administered by nursing staff.",
   },
   {
     id: "5",
@@ -63,7 +73,8 @@ const initialServices: ServiceItem[] = [
     cost: "25,000 RWF",
     duration: "45 mins",
     status: "Inactive",
-    description: "Scaling, polishing, and comprehensive oral health assessment.",
+    description:
+      "Scaling, polishing, and comprehensive oral health assessment.",
   },
 ];
 
@@ -71,7 +82,9 @@ export default function Services() {
   const [services, setServices] = useState<ServiceItem[]>(initialServices);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingService, setEditingService] = useState<ServiceItem | null>(null);
+  const [editingService, setEditingService] = useState<ServiceItem | null>(
+    null,
+  );
   const [successMessage, setSuccessMessage] = useState("");
 
   const [formData, setFormData] = useState({
@@ -83,9 +96,13 @@ export default function Services() {
     description: "",
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const openAddModal = () => {
@@ -116,7 +133,7 @@ export default function Services() {
 
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to remove this service?")) {
-      setServices(prev => prev.filter(item => item.id !== id));
+      setServices((prev) => prev.filter((item) => item.id !== id));
       triggerNotification("Service deleted successfully!");
     }
   };
@@ -125,12 +142,10 @@ export default function Services() {
     e.preventDefault();
     if (editingService) {
       // Update
-      setServices(prev =>
-        prev.map(item =>
-          item.id === editingService.id
-            ? { ...item, ...formData }
-            : item
-        )
+      setServices((prev) =>
+        prev.map((item) =>
+          item.id === editingService.id ? { ...item, ...formData } : item,
+        ),
       );
       triggerNotification("Service updated successfully!");
     } else {
@@ -139,7 +154,7 @@ export default function Services() {
         id: Date.now().toString(),
         ...formData,
       };
-      setServices(prev => [...prev, newService]);
+      setServices((prev) => [...prev, newService]);
       triggerNotification("New service registered successfully!");
     }
     setIsModalOpen(false);
@@ -151,9 +166,9 @@ export default function Services() {
   };
 
   const filteredServices = services.filter(
-    item =>
+    (item) =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.toLowerCase())
+      item.category.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -171,7 +186,7 @@ export default function Services() {
         </div>
       )}
 
-      <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-theme-xs">
+      <div className="bg-white dark:bg-white/3 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-theme-xs">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="relative w-full md:w-96">
             <span className="absolute -translate-y-1/2 left-3.5 top-1/2 text-gray-400">
@@ -181,7 +196,7 @@ export default function Services() {
               type="text"
               placeholder="Search services or categories..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl py-2.5 pl-10 pr-4 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 text-gray-800 dark:text-white"
             />
           </div>
@@ -196,24 +211,42 @@ export default function Services() {
 
         <div className="max-w-full overflow-x-auto">
           <Table>
-            <TableHeader className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01]">
+            <TableHeader className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/1">
               <TableRow>
-                <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400">
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400"
+                >
                   Service Name & Description
                 </TableCell>
-                <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400">
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400"
+                >
                   Category
                 </TableCell>
-                <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400">
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400"
+                >
                   Cost
                 </TableCell>
-                <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400">
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400"
+                >
                   Est. Duration
                 </TableCell>
-                <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400">
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400"
+                >
                   Status
                 </TableCell>
-                <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-center text-theme-xs uppercase tracking-wider dark:text-gray-400">
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-semibold text-gray-500 text-center text-theme-xs uppercase tracking-wider dark:text-gray-400"
+                >
                   Actions
                 </TableCell>
               </TableRow>
@@ -221,19 +254,28 @@ export default function Services() {
             <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
               {filteredServices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-gray-400">
+                  <TableCell
+                    colSpan={6}
+                    className="text-center py-12 text-gray-400"
+                  >
                     No services found.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredServices.map(service => (
-                  <TableRow key={service.id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors">
+                filteredServices.map((service) => (
+                  <TableRow
+                    key={service.id}
+                    className="hover:bg-gray-50/50 dark:hover:bg-white/1 transition-colors"
+                  >
                     <TableCell className="px-5 py-4 max-w-sm">
                       <div>
                         <span className="block font-medium text-gray-800 dark:text-white/90 text-sm">
                           {service.name}
                         </span>
-                        <span className="block text-theme-xs text-gray-400 truncate mt-0.5" title={service.description}>
+                        <span
+                          className="block text-theme-xs text-gray-400 truncate mt-0.5"
+                          title={service.description}
+                        >
                           {service.description}
                         </span>
                       </div>
@@ -250,7 +292,9 @@ export default function Services() {
                     <TableCell className="px-5 py-4">
                       <Badge
                         size="sm"
-                        color={service.status === "Active" ? "success" : "error"}
+                        color={
+                          service.status === "Active" ? "success" : "error"
+                        }
                       >
                         {service.status}
                       </Badge>
@@ -282,13 +326,18 @@ export default function Services() {
       </div>
 
       {/* CRUD Modal Dialogue */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[600px] m-4">
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        className="max-w-150 m-4"
+      >
         <div className="relative w-full p-6 bg-white dark:bg-gray-900 rounded-3xl">
           <h4 className="mb-2 text-xl font-semibold text-gray-800 dark:text-white/90">
             {editingService ? "Edit Service details" : "Add New Service"}
           </h4>
           <p className="mb-6 text-xs text-gray-500 dark:text-gray-400">
-            Fill in the parameters below to configure this service in the system catalog.
+            Fill in the parameters below to configure this service in the system
+            catalog.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -375,7 +424,12 @@ export default function Services() {
             </div>
 
             <div className="flex items-center justify-end gap-3 mt-6">
-              <Button type="button" size="sm" variant="outline" onClick={() => setIsModalOpen(false)}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setIsModalOpen(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" size="sm">

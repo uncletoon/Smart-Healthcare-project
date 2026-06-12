@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { api } from "../services/api";
 import DistanceBadge, { useGeolocation } from "../components/DistanceBadge";
 import { getGoogleMapsUrl } from "../lib/locationUtils";
+import BookingModal from "../components/BookingModal";
 
 type InsuranceItem = {
   name: string;
@@ -58,6 +59,7 @@ export default function ServiceDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { latitude: userLat, longitude: userLng } = useGeolocation();
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchServiceDetails = async () => {
@@ -380,7 +382,10 @@ export default function ServiceDetail() {
                 </div>
               </div>
 
-              <button className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all mb-4 flex items-center justify-center">
+              <button
+                onClick={() => setIsBookingModalOpen(true)}
+                className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all mb-4 flex items-center justify-center"
+              >
                 <Calendar size={20} className="mr-2" />
                 Book Appointment
               </button>
@@ -456,6 +461,12 @@ export default function ServiceDetail() {
           </div>
         </div>
       </div>
+      <BookingModal
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        serviceName={SERVICE_DATA.title}
+        requirements={SERVICE_DATA.requirements}
+      />
     </div>
   );
 }

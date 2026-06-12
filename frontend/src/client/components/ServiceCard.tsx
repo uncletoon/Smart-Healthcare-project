@@ -62,16 +62,15 @@ export default function ServiceCard({ service }: ServiceCardProps) {
         </div>
 
         <div className="mt-auto space-y-2">
-          <button
-            className="w-full py-2.5 bg-[#1B4B36] hover:bg-[#256045] text-white font-semibold rounded-lg transition-colors cursor-pointer"
-            id={`book-btn-${service.id}`}
-          >
-            Book Appointment
-          </button>
+          
           <Link
             to={`/services/${service.id}`}
-            className="w-full py-2.5 bg-white hover:bg-gray-50 text-[#1B4B36] border border-[#1B4B36] font-semibold rounded-lg transition-colors flex items-center justify-center cursor-pointer"
+            className="w-full py-2.5 bg-primary hover:bg-primary/80 text-white border border-primary font-semibold rounded-lg transition-colors flex items-center justify-center cursor-pointer"
             id={`details-btn-${service.id}`}
+            style={{
+              boxShadow:
+                "0 0 4px rgba(0, 77, 64, 0.35), 0 4px 4px rgba(0, 77, 64, 0.15)",
+            }}
           >
             View Details
           </Link>
