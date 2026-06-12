@@ -14,6 +14,7 @@ from facilities.views import (
 )
 from services_app.views import ServiceViewSet, ServiceCategoryViewSet
 from medicines.views import MedicineViewSet, MedicineCategoryViewSet
+from bookings.views import BookingViewSet
 
 router = DefaultRouter()
 router.register(r'categories', CategoryViewSet)
@@ -25,6 +26,7 @@ router.register(r'services', ServiceViewSet)
 router.register(r'servicecategories', ServiceCategoryViewSet)
 router.register(r'medicine-categories', MedicineCategoryViewSet)
 router.register(r'medicines', MedicineViewSet)
+router.register(r'bookings', BookingViewSet, basename='booking')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
