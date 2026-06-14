@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Modal } from "./modal/model";
 import { Calendar, Phone, CheckCircle2, User, AlertCircle, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { api } from "../services/api";
+import { useOstrabacus } from "../../ai/OstrabacusContext";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -19,6 +20,9 @@ export default function BookingModal({
   serviceId,
   requirements = [],
 }: BookingModalProps) {
+  const { prefilledBookingData, clearPrefilledData } = useOstrabacus();
+  const patientInputRef = useRef<HTMLInputElement>(null);
+
   // Form fields matching Django Booking model fields
   const [patientName, setPatientName] = useState("");
   const [phone, setPhone] = useState("");
@@ -30,19 +34,37 @@ export default function BookingModal({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Reset states when modal closes or opens
+  // Reset states or prefill from Ostrabacus AI when modal opens
   useEffect(() => {
     if (isOpen) {
-      setPatientName("");
-      setPhone("");
-      setDateTime("");
-      setNotes("");
-      setConfirmRequirements(false);
+      if (prefilledBookingData) {
+        // Accessibility Prefilling
+        setPatientName(prefilledBookingData.patientName || "");
+        setPhone(prefilledBookingData.phone || "");
+        
+        // Format YYYY-MM-DD date and HH:MM:SS time into datetime-local format: YYYY-MM-DDTHH:MM
+        const timePart = prefilledBookingData.time ? prefilledBookingData.time.substring(0, 5) : "09:00";
+        setDateTime(`${prefilledBookingData.date}T${timePart}`);
+        
+        setNotes(prefilledBookingData.notes || "");
+        setConfirmRequirements(true); // Pre-check requirements checklist for visual-impaired flow
+        
+        // FOCUS_SHIFT: Shift cursor and screen reader focus to the first form input element
+        setTimeout(() => {
+          patientInputRef.current?.focus();
+        }, 150);
+      } else {
+        setPatientName("");
+        setPhone("");
+        setDateTime("");
+        setNotes("");
+        setConfirmRequirements(false);
+      }
       setIsSubmitted(false);
       setIsLoading(false);
       setErrorMsg(null);
     }
-  }, [isOpen]);
+  }, [isOpen, prefilledBookingData]);
 
   const getMinDateTimeString = () => {
     const now = new Date();
@@ -80,6 +102,7 @@ export default function BookingModal({
         status: "Pending",
       });
       setIsSubmitted(true);
+      clearPrefilledData(); // Clear AI prefilled data on successful request
     } catch (err: any) {
       console.error("Failed to create booking:", err);
       setErrorMsg(
@@ -168,6 +191,7 @@ export default function BookingModal({
                         <User size={16} />
                       </span>
                       <input
+                        ref={patientInputRef}
                         type="text"
                         required={confirmRequirements}
                         minLength={6}

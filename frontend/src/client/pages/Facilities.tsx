@@ -13,7 +13,7 @@ import {
 import { motion } from "motion/react";
 import { api } from "@/src/client/services/api";
 import { cn } from "@/src/client/lib/utils";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import DistanceBadge, { useGeolocation } from "@/src/client/components/DistanceBadge";
 import { getNumericDistance } from "@/src/client/lib/locationUtils";
 
@@ -66,7 +66,29 @@ export function Facilities() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "distance">("name");
 
+  const { search } = useLocation();
   const { latitude: userLat, longitude: userLng } = useGeolocation();
+
+  // Ostrabacus AI Integration: Listen to URL query params for automated accessibility search
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const type = params.get("type");
+    const status = params.get("status");
+    const location = params.get("location");
+    const query = params.get("search");
+
+    if (query) {
+      setSearchQuery(query);
+    } else if (type) {
+      setSearchQuery(type);
+    } else if (location && location !== "near me") {
+      setSearchQuery(location);
+    }
+
+    if (location === "near me" || status === "open_now") {
+      setSortBy("distance");
+    }
+  }, [search]);
 
   useEffect(() => {
     const fetchFacilities = async () => {

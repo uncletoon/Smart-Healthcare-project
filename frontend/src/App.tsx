@@ -9,6 +9,8 @@ import { Services } from "./client/pages/Services";
 import { Facilities } from "./client/pages/Facilities";
 import { FacilityDetail } from "./client/pages/FacilityDetail";
 import ServiceDetail from "./client/pages/ServiceDetails";
+import { OstrabacusProvider } from "./ai/OstrabacusContext";
+import OstrabacusAssistant from "./ai/OstrabacusAssistant";
 
 // Import Admin Dashboard components and pages
 import AppLayout from "./dashboard/layout/AppLayout";
@@ -42,7 +44,7 @@ function PublicLayout() {
 
 export default function App() {
   return (
-    <>
+    <OstrabacusProvider>
       <BrowserRouter>
         <RouteScroller />
         <ScrollToTop />
@@ -69,8 +71,9 @@ export default function App() {
             <Route path="/emergency" element={<Services />} />
           </Route>
         </Routes>
+        <OstrabacusAssistant />
       </BrowserRouter>
-    </>
+    </OstrabacusProvider>
   );
 }
 

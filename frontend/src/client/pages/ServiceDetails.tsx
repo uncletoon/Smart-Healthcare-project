@@ -22,6 +22,7 @@ import { api } from "../services/api";
 import DistanceBadge, { useGeolocation } from "../components/DistanceBadge";
 import { getGoogleMapsUrl } from "../lib/locationUtils";
 import BookingModal from "../components/BookingModal";
+import { useOstrabacus } from "../../ai/OstrabacusContext";
 
 type InsuranceItem = {
   name: string;
@@ -60,6 +61,22 @@ export default function ServiceDetail() {
   const [error, setError] = useState<string | null>(null);
   const { latitude: userLat, longitude: userLng } = useGeolocation();
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+
+  const { shouldOpenModal, setShouldOpenModal, prefilledBookingData } = useOstrabacus();
+
+  // Ostrabacus AI Integration: Automatically trigger booking modal open if prefill request is pending for this facility
+  useEffect(() => {
+    if (shouldOpenModal && serviceData && prefilledBookingData) {
+      const matchesFacility = 
+        serviceData.facility.name.toLowerCase().includes(prefilledBookingData.facilityName.toLowerCase()) ||
+        prefilledBookingData.facilityName.toLowerCase().includes(serviceData.facility.name.toLowerCase());
+      
+      if (matchesFacility) {
+        setIsBookingModalOpen(true);
+        setShouldOpenModal(false); // Reset so it doesn't reopen unexpectedly
+      }
+    }
+  }, [shouldOpenModal, serviceData, prefilledBookingData, setShouldOpenModal]);
 
   useEffect(() => {
     const fetchServiceDetails = async () => {
