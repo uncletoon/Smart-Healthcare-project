@@ -62,7 +62,7 @@ export default function ServiceDetail() {
   const { latitude: userLat, longitude: userLng } = useGeolocation();
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
-  const { shouldOpenModal, setShouldOpenModal, prefilledBookingData } = useOstrabacus();
+  const { shouldOpenModal, setShouldOpenModal, prefilledBookingData, setPageContext } = useOstrabacus();
 
   // Ostrabacus AI Integration: Automatically trigger booking modal open if prefill request is pending for this facility
   useEffect(() => {
@@ -77,6 +77,26 @@ export default function ServiceDetail() {
       }
     }
   }, [shouldOpenModal, serviceData, prefilledBookingData, setShouldOpenModal]);
+
+  useEffect(() => {
+    if (serviceData) {
+      setPageContext({
+        type: "service",
+        data: {
+          title: serviceData.title,
+          category: serviceData.category,
+          price: serviceData.price,
+          duration: serviceData.duration,
+          facilityName: serviceData.facility.name,
+          requirements: serviceData.requirements,
+          description: serviceData.description,
+        }
+      });
+    }
+    return () => {
+      setPageContext(null);
+    };
+  }, [serviceData, setPageContext]);
 
   useEffect(() => {
     const fetchServiceDetails = async () => {

@@ -42,6 +42,7 @@ class Facility(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     is_verified = models.BooleanField(default=False,)
+    # is_opened = models.BooleanField(default=True)
     
     # Many-to-many relationships for accepted insurances and provided language services
     insurances = models.ManyToManyField(Insurance, blank=True)

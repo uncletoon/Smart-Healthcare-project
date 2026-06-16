@@ -21,6 +21,7 @@ import { api } from "@/src/client/services/api";
 import { cn } from "@/src/client/lib/utils";
 import { getGoogleMapsUrl } from "@/src/client/lib/locationUtils";
 import DistanceBadge, { useGeolocation } from "@/src/client/components/DistanceBadge";
+import { useOstrabacus } from "@/src/ai/OstrabacusContext";
 
 type Facility = {
   id: string;
@@ -88,6 +89,26 @@ export function FacilityDetail() {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { latitude: userLat, longitude: userLng } = useGeolocation();
+  const { setPageContext } = useOstrabacus();
+
+  useEffect(() => {
+    if (facility) {
+      setPageContext({
+        type: "facility",
+        data: {
+          name: facility.name,
+          type: facility.type,
+          location: facility.location,
+          hours: facility.hours,
+          services: services.map(s => s.name),
+          description: facility.description || "",
+        }
+      });
+    }
+    return () => {
+      setPageContext(null);
+    };
+  }, [facility, services, setPageContext]);
 
   useEffect(() => {
     const fetchData = async () => {

@@ -10,6 +10,28 @@ export interface PrefilledBookingData {
   notes: string;
 }
 
+export interface ChatMessage {
+  sender: "user" | "ai";
+  text: string;
+  timestamp: string;
+}
+
+export interface BookingSession {
+  facilityName?: string;
+  serviceId?: string | number;
+  serviceName?: string;
+  patientName?: string;
+  phone?: string;
+  date?: string; // YYYY-MM-DD
+  time?: string; // HH:MM:SS
+  notes?: string;
+}
+
+export interface PageContext {
+  type: "service" | "facility" | "list" | "other";
+  data: any;
+}
+
 // Define the shape of our context
 interface OstrabacusContextType {
   isOpen: boolean;
@@ -19,10 +41,21 @@ interface OstrabacusContextType {
   shouldOpenModal: boolean;
   setShouldOpenModal: (shouldOpen: boolean) => void;
   lastSpokenText: string;
-  speakText: (text: string) => void;
+  speakText: (text: string, onEnd?: () => void) => void;
   clearPrefilledData: () => void;
   currentIntent: string | null;
   setCurrentIntent: (intent: string | null) => void;
+  
+  // Expanded for multi-turn dialogue
+  chatHistory: ChatMessage[];
+  setChatHistory: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+  bookingSession: BookingSession | null;
+  setBookingSession: React.Dispatch<React.SetStateAction<BookingSession | null>>;
+  pageContext: PageContext | null;
+  setPageContext: React.Dispatch<React.SetStateAction<PageContext | null>>;
+  addChatMessage: (sender: "user" | "ai", text: string) => void;
+  clearChat: () => void;
+  resetBookingSession: () => void;
 }
 
 const OstrabacusContext = createContext<OstrabacusContextType | undefined>(undefined);
@@ -43,14 +76,43 @@ export const OstrabacusProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Current parsed intent (for debugging / visual feedback)
   const [currentIntent, setCurrentIntent] = useState<string | null>(null);
 
+  // Conversational state additions
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [bookingSession, setBookingSession] = useState<BookingSession | null>(null);
+  const [pageContext, setPageContext] = useState<PageContext | null>(null);
+
+  // Add message helper
+  const addChatMessage = useCallback((sender: "user" | "ai", text: string) => {
+    setChatHistory((prev) => [
+      ...prev,
+      {
+        sender,
+        text,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
+  }, []);
+
+  // Reset chat helper
+  const clearChat = useCallback(() => {
+    setChatHistory([]);
+  }, []);
+
+  // Reset booking session helper
+  const resetBookingSession = useCallback(() => {
+    setBookingSession(null);
+  }, []);
+
   // Clean out pre-fill cache once booking is completed or dismissed
   const clearPrefilledData = useCallback(() => {
     setPrefilledBookingData(null);
     setShouldOpenModal(false);
+    setBookingSession(null);
   }, []);
 
   // Text-To-Speech function using Web Speech API synthesis
-  const speakText = useCallback((text: string) => {
+  // onEnd callback lets the caller (e.g. mic manager) know when speech has finished
+  const speakText = useCallback((text: string, onEnd?: () => void) => {
     if (!text) return;
     setLastSpokenText(text); // Updates the aria-live region for screen readers
 
@@ -69,8 +131,17 @@ export const OstrabacusProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (englishVoice) {
         utterance.voice = englishVoice;
       }
+
+      // Fire onEnd when the browser finishes speaking so callers can chain actions
+      if (onEnd) {
+        utterance.onend = onEnd;
+        utterance.onerror = onEnd; // also unblock mic on error
+      }
       
       window.speechSynthesis.speak(utterance);
+    } else if (onEnd) {
+      // No speech synthesis available – fire callback immediately so mic restarts
+      onEnd();
     }
   }, []);
 
@@ -82,7 +153,7 @@ export const OstrabacusProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setIsOpen((prev) => {
           const nextState = !prev;
           if (nextState) {
-            speakText("Ostrabacus accessibility assistant opened. How can I help you today?");
+            speakText("Ostrabacus assistant opened. How can I help you today?");
           } else {
             speakText("Ostrabacus assistant closed.");
           }
@@ -108,6 +179,16 @@ export const OstrabacusProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         clearPrefilledData,
         currentIntent,
         setCurrentIntent,
+        
+        chatHistory,
+        setChatHistory,
+        bookingSession,
+        setBookingSession,
+        pageContext,
+        setPageContext,
+        addChatMessage,
+        clearChat,
+        resetBookingSession,
       }}
     >
       {children}

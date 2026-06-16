@@ -1,11 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
+import { ChatMessage, BookingSession, PageContext } from "./OstrabacusContext";
 
 // Standard response schema returned by the assistant
 export interface OstrabacusCommandResponse {
   intent: string;
   tool_called: string | null;
   parameters: Record<string, any>;
-  execution_strategy: "BACKGROUND_PREFILL" | "REFUSE" | "NAVIGATE";
+  execution_strategy: "BACKGROUND_PREFILL" | "REFUSE" | "NAVIGATE" | "SPEAK" | "COLLECT_INFO";
   spoken_feedback: string;
 }
 
@@ -27,45 +28,66 @@ if (GEMINI_API_KEY) {
 /**
  * System prompt instructing Gemini how to act, what intents are available, and the output format constraint.
  */
-const SYSTEM_INSTRUCTION = `
-You are the core intelligence of Ostrabacus AI, an embedded accessibility assistant for a healthcare platform.
-Your purpose is to help users—specifically those with visual impairments—seamlessly navigate the app, search for healthcare resources, and fill out booking forms via natural language voice/text.
+const BASE_SYSTEM_INSTRUCTION = `
+You are the core intelligence of Ostrabacus AI, a smart conversational accessibility assistant for a healthcare platform.
+Your purpose is to help users—specifically those with visual impairments—navigate the app, search for healthcare resources, understand service details, and book appointments via natural language.
 
-Determine the user's intent and return a clean JSON object matching the schema.
+State Machine Intents & Strategies:
+1. RESOURCE_SEARCH:
+   - tool_called: "fetch_resources"
+   - parameters:
+     - facility_type: "clinic" | "pharmacy" | "hospital" | null
+     - status: "open_now" | "all" | null
+     - location: matched location name from Available Locations OR "near me" if they ask for things nearby or specify distance, otherwise null.
+   - execution_strategy: "BACKGROUND_PREFILL"
 
-INTENTS & ACTIONS:
-1. RESOURCE_SEARCH
-   - Action (tool_called): "fetch_resources"
-   - Parameters:
-     - "facility_type": "clinic" | "pharmacy" | "hospital" (allowed types)
-     - "status": "open_now" | "all"
-     - "location": string (e.g. "Kigali", "Remera", etc.)
-   - Strategy: "BACKGROUND_PREFILL"
+2. NAVIGATE:
+   - tool_called: "navigate_to"
+   - parameters:
+     - page_route: "/search" (for facilities) | "/booking" (for services) | "/dashboard" | "/home"
+   - execution_strategy: "NAVIGATE"
 
-2. NAVIGATE
-   - Action (tool_called): "navigate_to"
-   - Parameters:
-     - "page_route": "/search" | "/booking" | "/dashboard" | "/home" (allowed page routes)
-   - Strategy: "NAVIGATE"
+3. FACILITY_BOOKING / COLLECT_INFO:
+   - tool_called: "prefill_booking_form"
+   - parameters:
+     - patient_name, phone, requested_date, requested_time, facility_name, service_name, notes
+   - Guidelines:
+     - CRITICAL: patient_name and phone are ALWAYS PRE-FILLED from the logged-in user - NEVER ask for them.
+     - Required fields to collect via conversation: service_name, requested_date, requested_time (3 fields only).
+     - Auto-filling facility from service:
+       - A service always belongs to exactly ONE facility. If the user mentions a service name, look it up in the Available Services list, find its facilityName, and auto-set BOTH service_name AND facility_name in your response parameters immediately. NEVER ask "which facility?" if they already named a service.
+       - If the user selects a facility first (not a service), THEN ask which service from that facility.
+     - Step-by-step collection order:
+       1. Extract service_name from user message → auto-set facility_name from Available Services.
+       2. If requested_date is missing → ask "What date would you like the appointment? (e.g. tomorrow, June 20)"
+       3. If requested_time is missing → ask "What time would you like? (e.g. 9 AM, 2:30 PM)"
+       4. Once service, date, and time are all set → execution_strategy: "BACKGROUND_PREFILL" and confirm details.
+     - If any of the 3 required fields are missing, set execution_strategy to "COLLECT_INFO" and ask only for the NEXT missing field.
+     - Once ALL 3 are gathered, set execution_strategy to "BACKGROUND_PREFILL" and compose a detailed confirmation summary in spoken_feedback listing all details (service, facility, date, time, name, phone).
 
-3. FACILITY_BOOKING
-   - Action (tool_called): "prefill_booking_form"
-   - Parameters:
-     - "facility_name": string (the healthcare facility name mentioned)
-     - "requested_date": string formatted as YYYY-MM-DD
-     - "requested_time": string formatted as HH:MM:SS
-   - Strategy: "BACKGROUND_PREFILL"
+4. READ_DETAILS:
+   - tool_called: null
+   - parameters: {}
+   - Guidelines:
+     - If the user asks about the requirements, price, wait time, or details of the current service/facility (found in ACTIVE PAGE CONTEXT), answer their question clearly using that context.
+     - execution_strategy: "SPEAK"
 
-CRITICAL LAWS:
-- THE HUMAN-IN-THE-LOOP RULE: Never finalize bookings or submit forms automatically. Prefill them and direct focus.
-- CONTEXT BOUNDARY: Refuse off-topic questions (e.g. weather, flights, jokes). Respond with:
-  - intent: "OFF_TOPIC"
-  - tool_called: null
-  - strategy: "REFUSE"
-  - spoken_feedback: Refuse politely and remind them of your local healthcare clinic/pharmacy capabilities.
+5. CONVERSATION:
+   - tool_called: null
+   - parameters: {}
+   - Guidelines:
+     - Use this for greeting the user, explaining what you can do, or general polite chit-chat.
+     - execution_strategy: "SPEAK"
 
-OUTPUT FORMAT:
-Respond ONLY with a valid, clean JSON object. Do not include markdown formatting like \`\`\`json, conversational padding, or commentary.
+6. OFF_TOPIC:
+   - tool_called: null
+   - parameters: {}
+   - Guidelines:
+     - If the user asks about unrelated topics (weather, flights, jokes, programming, code), politely refuse.
+     - execution_strategy: "REFUSE"
+
+Output Format:
+Return ONLY a valid JSON object matching the schema. Do not output markdown code blocks.
 `;
 
 /**
@@ -88,7 +110,7 @@ export function parseLocalNLP(input: string): OstrabacusCommandResponse {
       tool_called: null,
       parameters: {},
       execution_strategy: "REFUSE",
-      spoken_feedback: "I'm sorry, as the Ostrabacus healthcare assistant, I can only help you find local clinics, pharmacies, hospitals, and pre-fill booking appointments. How can I help you navigate care today?"
+      spoken_feedback: "I'm sorry, as the Ostrabacus healthcare assistant, I can only help you find local clinics, pharmacies, hospitals, and pre-fill booking appointments."
     };
   }
 
@@ -163,7 +185,6 @@ export function parseLocalNLP(input: string): OstrabacusCommandResponse {
     { keywords: ["home", "landing"], route: "/home", name: "home page" },
     { keywords: ["search", "search facility", "facilities", "healthcare", "find care", "find a place"], route: "/services", name: "facility search" },
     { keywords: ["booking", "book a service", "search for a service"], route: "/services", name: "medical services" },
-    // { keywords: ["dashboard", "admin", "profile", "analytics"], route: "/dashboard", name: "admin dashboard" }
   ];
 
   for (const item of navigateRoutes) {
@@ -223,25 +244,71 @@ export function parseLocalNLP(input: string): OstrabacusCommandResponse {
       location: "kigali"
     },
     execution_strategy: "BACKGROUND_PREFILL",
-    spoken_feedback: "I am updating the resources search view. You can also ask me to book appointments or navigate pages."
+    spoken_feedback: "I got you, Please wait a few moments. You can also ask me to book appointments or navigate pages."
   };
 }
 
 /**
  * Main command analysis entrypoint.
- * Sends the user input to Gemini if initialized, falling back to local parsing.
+ * Sends the user input and conversation context to Gemini, falling back to local parsing.
  */
-export async function analyzeCommand(userInput: string): Promise<OstrabacusCommandResponse> {
+export async function analyzeCommand(
+  userInput: string,
+  chatHistory: ChatMessage[],
+  context: {
+    currentPath: string;
+    pageContext: PageContext | null;
+    bookingSession: BookingSession | null;
+    availableLocations: string[];
+    availableFacilities: string[];
+    availableServices: Array<{ id: string | number; name: string; facilityName: string }>;
+    prefilledPatientName: string;
+    prefilledPhone: string;
+  }
+): Promise<OstrabacusCommandResponse> {
   if (!aiClient) {
     return parseLocalNLP(userInput);
   }
 
   try {
+    // Format conversation history for Gemini API
+    const contents = chatHistory.map((msg) => ({
+      role: msg.sender === "user" ? "user" : "model",
+      parts: [{ text: msg.text }]
+    }));
+
+    // Add current user prompt
+    contents.push({
+      role: "user",
+      parts: [{ text: userInput }]
+    });
+
+    // Instate dynamic system instructions with context
+    const dynamicSystemInstruction = `
+${BASE_SYSTEM_INSTRUCTION}
+
+CURRENT DATA SYSTEM CONTEXT:
+- Available Locations: ${JSON.stringify(context.availableLocations)}
+- Available Facilities: ${JSON.stringify(context.availableFacilities)}
+- Available Services (each service has exactly ONE facility): ${JSON.stringify(context.availableServices)}
+
+PREFILLED PATIENT CREDENTIALS (DO NOT ASK THE USER FOR THESE):
+- patient_name: "${context.prefilledPatientName}"
+- phone: "${context.prefilledPhone}"
+Always include these values in your parameters when constructing a booking response.
+
+ACTIVE PAGE CONTEXT:
+${context.pageContext ? JSON.stringify(context.pageContext) : "No active service or facility page loaded."}
+
+CURRENT BOOKING SESSION DATA (COLLECTED SO FAR):
+${context.bookingSession ? JSON.stringify(context.bookingSession) : "No active booking session."}
+    `;
+
     const response = await aiClient.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: userInput,
+      model: "gemini-3.1-flash-lite",
+      contents: contents as any,
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
+        systemInstruction: dynamicSystemInstruction,
         responseMimeType: "application/json",
         responseSchema: {
           type: "OBJECT",
@@ -255,14 +322,18 @@ export async function analyzeCommand(userInput: string): Promise<OstrabacusComma
                 status: { type: "STRING" },
                 location: { type: "STRING" },
                 facility_name: { type: "STRING" },
+                service_name: { type: "STRING" },
+                patient_name: { type: "STRING" },
+                phone: { type: "STRING" },
                 requested_date: { type: "STRING" },
                 requested_time: { type: "STRING" },
-                page_route: { type: "STRING" }
+                page_route: { type: "STRING" },
+                notes: { type: "STRING" }
               }
             },
             execution_strategy: {
               type: "STRING",
-              enum: ["BACKGROUND_PREFILL", "REFUSE", "NAVIGATE"]
+              enum: ["BACKGROUND_PREFILL", "REFUSE", "NAVIGATE", "SPEAK", "COLLECT_INFO"]
             },
             spoken_feedback: { type: "STRING" }
           },
