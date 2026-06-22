@@ -36,7 +36,7 @@ State Machine Intents & Strategies:
 1. RESOURCE_SEARCH:
    - tool_called: "fetch_resources"
    - parameters:
-     - facility_type: "clinic" | "pharmacy" | "hospital" | null
+     - facility_type: "clinic" | "pharmacy" | "hospital" | "medicines" | null
      - status: "open_now" | "all" | null
      - location: matched location name from Available Locations OR "near me" if they ask for things nearby or specify distance, otherwise null.
    - execution_strategy: "BACKGROUND_PREFILL"
@@ -44,7 +44,7 @@ State Machine Intents & Strategies:
 2. NAVIGATE:
    - tool_called: "navigate_to"
    - parameters:
-     - page_route: "/search" (for facilities) | "/booking" (for services) | "/dashboard" | "/home"
+     - page_route: "/search" (for facilities) | "/booking" (for services) | "/medicines" | "/home"
    - execution_strategy: "NAVIGATE"
 
 3. FACILITY_BOOKING / COLLECT_INFO:
@@ -185,6 +185,7 @@ export function parseLocalNLP(input: string): OstrabacusCommandResponse {
     { keywords: ["home", "landing"], route: "/home", name: "home page" },
     { keywords: ["search", "search facility", "facilities", "healthcare", "find care", "find a place"], route: "/services", name: "facility search" },
     { keywords: ["booking", "book a service", "search for a service"], route: "/services", name: "medical services" },
+    { keywords: ["medicines", "search for a medicines"], route: "/medicines", name: "medicines page" },
   ];
 
   for (const item of navigateRoutes) {

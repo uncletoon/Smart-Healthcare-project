@@ -18,7 +18,7 @@ import { GeminiLiveSession, buildSystemInstruction, LiveToolCallEvent } from "./
 import { useNavigate } from "react-router-dom";
 import {
   Mic, MicOff, X, Sparkles, RefreshCw,
-  CheckCircle2, XCircle, Volume2, Loader2, Radio, ChevronUp, ChevronDown
+  CheckCircle2, XCircle, Loader2, Radio, ChevronUp, ChevronDown, CalendarCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { api } from "../client/services/api";
@@ -74,6 +74,13 @@ export default function OstrabacusAssistant() {
     targetServiceId: string | number | null;
   } | null>(null);
 
+  const [bookingSuccess, setBookingSuccess] = useState<{
+    serviceName: string; facilityName: string;
+    date: string; time: string;
+    patientName: string; phone: string;
+  } | null>(null);
+  const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
+
   const [locations, setLocations] = useState<any[]>([]);
   const [facilities, setFacilities] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
@@ -108,7 +115,7 @@ export default function OstrabacusAssistant() {
   }, []);
 
   // ── Booking confirmation ───────────────────────────────────────────────────
-  const handleConfirmation = useCallback((text: string): boolean => {
+  const handleConfirmation = useCallback(async (text: string): Promise<boolean> => {
     if (!awaitingConfirmation) return false;
     const norm = text.toLowerCase().trim();
     const isYes = CONFIRM.some(k => norm.includes(k));
@@ -116,20 +123,52 @@ export default function OstrabacusAssistant() {
 
     if (isYes) {
       const { params, targetServiceId } = awaitingConfirmation;
-      setPrefilledBookingData({
-        facilityName: params.facility_name,
-        date: params.requested_date,
-        time: params.requested_time,
-        patientName: PATIENT_NAME,
-        phone: PATIENT_PHONE,
-        notes: params.notes || "Prefilled by Ostrabacus AI."
-      });
-      setShouldOpenModal(true);
-      resetBookingSession();
-      setAwaitingConfirmation(null);
-      addEntry("system", "✅ Booking confirmed — opening form…");
-      if (targetServiceId) navigate(`/services/${targetServiceId}`);
-      else navigate("/services");
+
+      // Resolve service id from local services list
+      const serviceId = targetServiceId ?? (
+        services.find(s => s.name.toLowerCase().includes(params.service_name.toLowerCase()))?.id ?? null
+      );
+
+      if (!serviceId) {
+        addEntry("system", "⚠️ Could not find service to book. Please try again.");
+        setAwaitingConfirmation(null);
+        return true;
+      }
+
+      setIsBookingSubmitting(true);
+      addEntry("system", "⏳ Submitting your booking…");
+      setExpanded(true);
+
+      // Build datetime-local string: YYYY-MM-DDTHH:MM
+      const timePart = params.requested_time.substring(0, 5);
+      const dateTime = `${params.requested_date}T${timePart}`;
+
+      try {
+        await api.createBooking({
+          patient_name: PATIENT_NAME,
+          service: serviceId,
+          date_time: dateTime,
+          phone: PATIENT_PHONE,
+          notes: params.notes || "Booked via Ostrabacus AI.",
+          status: "Pending",
+        });
+
+        setBookingSuccess({
+          serviceName: params.service_name,
+          facilityName: params.facility_name,
+          date: params.requested_date,
+          time: timePart,
+          patientName: PATIENT_NAME,
+          phone: PATIENT_PHONE,
+        });
+        resetBookingSession();
+        setAwaitingConfirmation(null);
+        addEntry("system", "✅ Appointment booked successfully!");
+      } catch (err: any) {
+        addEntry("system", `❌ Booking failed: ${err?.message ?? "Please try again."}}`);
+      } finally {
+        setIsBookingSubmitting(false);
+      }
       return true;
     }
     if (isNo) {
@@ -139,7 +178,7 @@ export default function OstrabacusAssistant() {
       return true;
     }
     return false;
-  }, [awaitingConfirmation, setPrefilledBookingData, setShouldOpenModal, resetBookingSession, navigate, addEntry]);
+  }, [awaitingConfirmation, services, resetBookingSession, addEntry]);
 
   // ── Tool execution ─────────────────────────────────────────────────────────
   const executeTool = useCallback(async (event: LiveToolCallEvent) => {
@@ -151,6 +190,27 @@ export default function OstrabacusAssistant() {
       addEntry("system", `📍 → ${args.page}`);
       navigate(route);
       liveRef.current?.sendToolResponse(callId, name, { success: true });
+      return;
+    }
+
+    if (name === "view_service") {
+      const { service_id, service_name } = args;
+      // Fallback: try to resolve by name if the model gives a non-numeric id
+      let resolvedId = service_id;
+      if (!resolvedId || isNaN(Number(resolvedId))) {
+        const matched = services.find(s =>
+          s.name.toLowerCase().includes((service_name ?? "").toLowerCase())
+        );
+        resolvedId = matched ? String(matched.id) : null;
+      }
+      if (resolvedId) {
+        addEntry("system", `📄 Opening service: ${service_name ?? service_id}`);
+        navigate(`/services/${resolvedId}`);
+        liveRef.current?.sendToolResponse(callId, name, { success: true, service_id: resolvedId });
+      } else {
+        addEntry("system", `⚠️ Could not find service "${service_name}".`);
+        liveRef.current?.sendToolResponse(callId, name, { success: false, error: "Service not found" });
+      }
       return;
     }
 
@@ -222,7 +282,7 @@ export default function OstrabacusAssistant() {
 
     const availableServices = services.map(s => {
       const fac = facilities.find(f => f.id === s.facility);
-      return { name: s.name, facilityName: fac?.company_name ?? "Unknown" };
+      return { id: String(s.id), name: s.name, facilityName: fac?.company_name ?? "Unknown" };
     });
 
     // Guard wrapper: discards callbacks from orphaned sessions (StrictMode / rapid clicks)
@@ -342,20 +402,21 @@ export default function OstrabacusAssistant() {
     if (next) setVoiceState("muted");
   };
 
-  // ── Text submit fallback ───────────────────────────────────────────────────
-  const handleTextSubmit = (e: React.FormEvent) => {
+    const handleTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const text = textInput.trim();
     if (!text) return;
 
-    if (awaitingConfirmation && handleConfirmation(text)) {
-      setTextInput(""); return;
-    }
-
-    addEntry("user", text);
-    setTextInput("");
-    liveRef.current?.sendText(text);
-    setVoiceState("thinking");
+    const doConfirm = async () => {
+      if (awaitingConfirmation && await handleConfirmation(text)) {
+        setTextInput(""); return;
+      }
+      addEntry("user", text);
+      setTextInput("");
+      liveRef.current?.sendText(text);
+      setVoiceState("thinking");
+    };
+    doConfirm();
   };
 
   // ── Voice state config ─────────────────────────────────────────────────────
@@ -418,11 +479,11 @@ export default function OstrabacusAssistant() {
                 {expanded && (
                   <motion.div
                     initial={{ height: 0 }}
-                    animate={{ height: 220 }}
+                    animate={{ height: bookingSuccess ? 340 : 220 }}
                     exit={{ height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="h-[220px] overflow-y-auto px-4 pt-3 pb-2 space-y-2 flex flex-col">
+                    <div className={`${bookingSuccess ? "h-[340px]" : "h-[220px]"} overflow-y-auto px-4 pt-3 pb-2 space-y-2 flex flex-col`}>
                       {chatLog.length === 0 ? (
                         liveApiBlocked ? (
                           <div className="flex-1 flex flex-col justify-center gap-3 text-xs px-2">
@@ -477,16 +538,24 @@ export default function OstrabacusAssistant() {
                         </div>
                       )}
 
+                      {/* Booking submission in progress */}
+                      {isBookingSubmitting && (
+                        <div className="self-stretch flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-3 py-2.5 text-[11px]">
+                          <span className="w-3.5 h-3.5 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin shrink-0" />
+                          <span className="text-yellow-300">Submitting your appointment…</span>
+                        </div>
+                      )}
+
                       {/* Confirmation gate */}
-                      {awaitingConfirmation && (
+                      {awaitingConfirmation && !isBookingSubmitting && (
                         <div className="self-stretch bg-accent/10 border border-accent/25 rounded-xl p-3 text-xs">
                           <p className="text-white/70 mb-2 text-[11px]">
-                            Say <strong className="text-accent">YES</strong> to open the booking form or <strong className="text-red-400">NO</strong> to cancel.
+                            Say <strong className="text-accent">YES</strong> to submit the booking or <strong className="text-red-400">NO</strong> to cancel.
                           </p>
                           <div className="flex gap-2">
                             <button onClick={() => handleConfirmation("yes")}
                               className="flex-1 flex items-center justify-center gap-1 bg-accent/20 hover:bg-accent/30 text-accent border border-accent/30 rounded-lg py-1.5 text-[10px] font-bold cursor-pointer transition-colors">
-                              <CheckCircle2 size={11} /> Confirm
+                              <CheckCircle2 size={11} /> Confirm & Book
                             </button>
                             <button onClick={() => handleConfirmation("no")}
                               className="flex-1 flex items-center justify-center gap-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 rounded-lg py-1.5 text-[10px] font-bold cursor-pointer transition-colors">
@@ -494,6 +563,53 @@ export default function OstrabacusAssistant() {
                             </button>
                           </div>
                         </div>
+                      )}
+
+                      {/* Booking success panel */}
+                      {bookingSuccess && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="self-stretch bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-xs"
+                        >
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center shrink-0">
+                              <CalendarCheck size={16} className="text-green-400" />
+                            </div>
+                            <div>
+                              <p className="text-green-400 font-bold text-[11px]">Appointment Requested!</p>
+                              <p className="text-white/50 text-[10px]">Your appointment has been successfully requested. The facility will review and confirm your slot.</p>
+                            </div>
+                          </div>
+                          <div className="space-y-1.5 bg-white/5 rounded-lg px-3 py-2 mb-3">
+                            <div className="flex justify-between">
+                              <span className="text-white/40">Service</span>
+                              <span className="text-white font-semibold">{bookingSuccess.serviceName}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-white/40">Facility</span>
+                              <span className="text-white/80">{bookingSuccess.facilityName}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-white/40">Date</span>
+                              <span className="text-white/80">{bookingSuccess.date}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-white/40">Time</span>
+                              <span className="text-white/80">{bookingSuccess.time}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-white/40">Status</span>
+                              <span className="text-amber-400 font-bold text-[10px] uppercase tracking-wide">Pending Review</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setBookingSuccess(null)}
+                            className="w-full bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/25 rounded-lg py-1.5 text-[10px] font-bold cursor-pointer transition-colors"
+                          >
+                            Dismiss
+                          </button>
+                        </motion.div>
                       )}
 
                       <div ref={logEndRef} />

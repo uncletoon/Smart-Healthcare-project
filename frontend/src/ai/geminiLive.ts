@@ -383,7 +383,10 @@ export class GeminiLiveSession {
       if (part.inlineData?.mimeType?.startsWith("audio/")) {
         this.playbackQueue?.enqueue(base64ToPcm16(part.inlineData.data));
       }
-      if (part.text) {
+      // Skip internal thinking/reasoning tokens emitted by the model.
+      // The native audio model tags these with `thought: true`; we also
+      // guard against any stray bold-header patterns just in case.
+      if (part.text && !part.thought) {
         this.callbacks.onTranscript(part.text);
       }
     }
@@ -407,9 +410,21 @@ export const OSTRABACUS_TOOLS = [
     parameters: {
       type: "OBJECT",
       properties: {
-        page: { type: "STRING", enum: ["home", "facilities", "services", "admin"], description: "Target page." }
+        page: { type: "STRING", enum: ["home", "facilities", "services", "medicines"], description: "Target page." }
       },
       required: ["page"]
+    }
+  },
+  {
+    name: "view_service",
+    description: "Navigate to the details page of a specific service. Use this when the user asks to see, view, or learn more about a named service. Look up the service_id from the Available Services list.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        service_id:   { type: "STRING", description: "The numeric ID of the service from the Available Services list." },
+        service_name: { type: "STRING", description: "Human-readable service name, used for confirmation speech." }
+      },
+      required: ["service_id", "service_name"]
     }
   },
   {
@@ -448,11 +463,11 @@ export function buildSystemInstruction(context: {
   phone: string;
   availableLocations: string[];
   availableFacilities: string[];
-  availableServices: Array<{ name: string; facilityName: string }>;
+  availableServices: Array<{ id?: string; name: string; facilityName: string }>;
   pageContext?: { type: string; data: any } | null;
 }): string {
   const svcList = context.availableServices
-    .map(s => `"${s.name}" (${s.facilityName})`).join(", ");
+    .map(s => `"${s.name}" (ID: ${s.id ?? "?"}, Facility: ${s.facilityName})`).join(", ");
 
   const pageCtx = context.pageContext
     ? `\nCURRENT PAGE (${context.pageContext.type}): ${JSON.stringify(context.pageContext.data)}`
@@ -471,11 +486,12 @@ AVAILABLE DATA:
 ${pageCtx}
 
 TOOL USAGE RULES:
-1. navigate_to — use for "go to home/facilities/services/admin".
-2. search_facilities — extract type/status/location from user's words; use "near me" for proximity requests.
-3. open_booking — a service belongs to exactly ONE facility; look it up from Services above (never ask which facility if service is named). Collect service → date → time in order, then call open_booking. Ask one question at a time.
-4. Page reading — if the user asks about details/requirements/price, use CURRENT PAGE context.
-5. Off-topic — politely decline and redirect to healthcare tasks.
+1. navigate_to — use for "go to home/facilities/services/medicines".
+2. view_service — use when the user says "show me", "open", "view", "tell me about", or "details of" a specific service name. Look up the service_id from the Services list above and call this tool immediately.
+3. search_facilities — extract type/status/location from user's words; use "near me" for proximity requests.
+4. open_booking — a service belongs to exactly ONE facility; look it up from Services above (never ask which facility if service is named). Collect service → date → time in order, then call open_booking. Ask one question at a time.
+5. Page reading — if the user asks about details/requirements/price, use CURRENT PAGE context.
+6. Off-topic — politely decline and redirect to healthcare tasks.
 
 Voice style: be brief, warm, and natural. No bullet lists unless reading details.`;
 }
