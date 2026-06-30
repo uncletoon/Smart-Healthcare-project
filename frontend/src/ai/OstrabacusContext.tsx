@@ -28,7 +28,7 @@ export interface BookingSession {
 }
 
 export interface PageContext {
-  type: "service" | "facility" | "list" | "other";
+  type: "service" | "facility" | "list" | "medicines" | "other";
   data: any;
 }
 

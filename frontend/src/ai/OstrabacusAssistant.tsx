@@ -84,6 +84,7 @@ export default function OstrabacusAssistant() {
   const [locations, setLocations] = useState<any[]>([]);
   const [facilities, setFacilities] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
+  const [medicines, setMedicines] = useState<any[]>([]);
 
   // ── Refs ───────────────────────────────────────────────────────────────────
   const liveRef      = useRef<GeminiLiveSession | null>(null);
@@ -91,18 +92,37 @@ export default function OstrabacusAssistant() {
   const isOpeningRef = useRef(false); // prevents double-open from StrictMode
   const logEndRef    = useRef<HTMLDivElement>(null);
   const inputRef     = useRef<HTMLInputElement>(null);
+  
+  // Always-current refs so callbacks captured at session-open never go stale
+  const awaitingConfirmationRef = useRef(awaitingConfirmation);
+  const servicesRef             = useRef(services);
+  const facilitiesRef           = useRef(facilities);
+  const medicinesRef            = useRef(medicines);
 
   // ── Fetch DB context ───────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
-        const [l, f, s] = await Promise.all([
-          api.getLocations(), api.getFacilities(), api.getServices()
+        const [l, f, s, m] = await Promise.all([
+          api.getLocations().catch(() => []),
+          api.getFacilities().catch(() => []),
+          api.getServices().catch(() => []),
+          api.getMedicines().catch(() => [])
         ]);
-        setLocations(l); setFacilities(f); setServices(s);
+        setLocations(l);
+        setFacilities(f);
+        setServices(s);
+        const medicinesList = Array.isArray(m) ? m : m?.results || [];
+        setMedicines(medicinesList);
       } catch (e) { console.error("Ostrabacus context error", e); }
     })();
   }, []);
+
+  // Keep always-current refs in sync with state
+  useEffect(() => { awaitingConfirmationRef.current = awaitingConfirmation; }, [awaitingConfirmation]);
+  useEffect(() => { servicesRef.current = services; },   [services]);
+  useEffect(() => { facilitiesRef.current = facilities; }, [facilities]);
+  useEffect(() => { medicinesRef.current = medicines; }, [medicines]);
 
   // ── Auto-scroll ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -114,63 +134,68 @@ export default function OstrabacusAssistant() {
     setChatLog(prev => [...prev, { role, text, ts: ts() }]);
   }, []);
 
-  // ── Booking confirmation ───────────────────────────────────────────────────
+  // ── Core booking submission (shared by voice tool + typed confirm) ─────────────
+  // Uses refs so it's safe to call from session callbacks that were captured at open time.
+  const submitBooking = useCallback(async () => {
+    const pending = awaitingConfirmationRef.current; // always live — never stale
+    if (!pending) return;
+    const { params, targetServiceId } = pending;
+
+    const serviceId = targetServiceId ?? (
+      servicesRef.current.find(s => s.name.toLowerCase().includes(params.service_name.toLowerCase()))?.id ?? null
+    );
+
+    if (!serviceId) {
+      addEntry("system", "⚠️ Could not find service to book. Please open service you want to book.");
+      setAwaitingConfirmation(null);
+      return;
+    }
+
+    setIsBookingSubmitting(true);
+    addEntry("system", "⏳ Submitting your booking…");
+    setExpanded(true);
+
+    const timePart = params.requested_time.substring(0, 5);
+    const dateTime = `${params.requested_date}T${timePart}`;
+
+    try {
+      await api.createBooking({
+        patient_name: PATIENT_NAME,
+        service: serviceId,
+        date_time: dateTime,
+        phone: PATIENT_PHONE,
+        notes: params.notes || "Booked via Ostrabacus AI. Contact client to confirm.",
+        status: "Pending",
+      });
+
+      setBookingSuccess({
+        serviceName: params.service_name,
+        facilityName: params.facility_name,
+        date: params.requested_date,
+        time: timePart,
+        patientName: PATIENT_NAME,
+        phone: PATIENT_PHONE,
+      });
+      resetBookingSession();
+      setAwaitingConfirmation(null);
+      addEntry("system", "✅ Appointment booked successfully!");
+    } catch (err: any) {
+      addEntry("system", `❌ Booking failed: ${err?.message ?? "Please try again."}`);
+    } finally {
+      setIsBookingSubmitting(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetBookingSession, addEntry]); // refs are stable — awaitingConfirmation/services not needed
+
+
+  // ── Booking confirmation (text / button path) ───────────────────────────
   const handleConfirmation = useCallback(async (text: string): Promise<boolean> => {
     if (!awaitingConfirmation) return false;
     const norm = text.toLowerCase().trim();
     const isYes = CONFIRM.some(k => norm.includes(k));
     const isNo  = CANCEL.some(k => norm.includes(k));
 
-    if (isYes) {
-      const { params, targetServiceId } = awaitingConfirmation;
-
-      // Resolve service id from local services list
-      const serviceId = targetServiceId ?? (
-        services.find(s => s.name.toLowerCase().includes(params.service_name.toLowerCase()))?.id ?? null
-      );
-
-      if (!serviceId) {
-        addEntry("system", "⚠️ Could not find service to book. Please try again.");
-        setAwaitingConfirmation(null);
-        return true;
-      }
-
-      setIsBookingSubmitting(true);
-      addEntry("system", "⏳ Submitting your booking…");
-      setExpanded(true);
-
-      // Build datetime-local string: YYYY-MM-DDTHH:MM
-      const timePart = params.requested_time.substring(0, 5);
-      const dateTime = `${params.requested_date}T${timePart}`;
-
-      try {
-        await api.createBooking({
-          patient_name: PATIENT_NAME,
-          service: serviceId,
-          date_time: dateTime,
-          phone: PATIENT_PHONE,
-          notes: params.notes || "Booked via Ostrabacus AI.",
-          status: "Pending",
-        });
-
-        setBookingSuccess({
-          serviceName: params.service_name,
-          facilityName: params.facility_name,
-          date: params.requested_date,
-          time: timePart,
-          patientName: PATIENT_NAME,
-          phone: PATIENT_PHONE,
-        });
-        resetBookingSession();
-        setAwaitingConfirmation(null);
-        addEntry("system", "✅ Appointment booked successfully!");
-      } catch (err: any) {
-        addEntry("system", `❌ Booking failed: ${err?.message ?? "Please try again."}}`);
-      } finally {
-        setIsBookingSubmitting(false);
-      }
-      return true;
-    }
+    if (isYes) { await submitBooking(); return true; }
     if (isNo) {
       resetBookingSession();
       setAwaitingConfirmation(null);
@@ -178,14 +203,20 @@ export default function OstrabacusAssistant() {
       return true;
     }
     return false;
-  }, [awaitingConfirmation, services, resetBookingSession, addEntry]);
+  }, [awaitingConfirmation, submitBooking, resetBookingSession, addEntry]);
 
   // ── Tool execution ─────────────────────────────────────────────────────────
   const executeTool = useCallback(async (event: LiveToolCallEvent) => {
     const { name, args, callId } = event;
 
     if (name === "navigate_to") {
-      const map: Record<string, string> = { home: "/", facilities: "/facilities", services: "/services", admin: "/admin" };
+      const map: Record<string, string> = {
+        home: "/",
+        facilities: "/facilities",
+        services: "/services",
+        medicines: "/medicines",
+        admin: "/admin"
+      };
       const route = map[args.page] ?? "/";
       addEntry("system", `📍 → ${args.page}`);
       navigate(route);
@@ -226,13 +257,15 @@ export default function OstrabacusAssistant() {
     }
 
     if (name === "open_booking") {
-      // Resolve facility from service using local data
+      // Resolve facility from service using local data — use ref for always-current services list
+      const svcList = servicesRef.current;
+      const facList = facilitiesRef.current;
       let resolvedFacility = args.facility_name;
       let targetServiceId: string | number | null = null;
-      const matched = services.find(s => s.name.toLowerCase().includes(args.service_name.toLowerCase()));
+      const matched = svcList.find(s => s.name.toLowerCase().includes(args.service_name.toLowerCase()));
       if (matched) {
         targetServiceId = matched.id;
-        const fac = facilities.find(f => f.id === matched.facility);
+        const fac = facList.find(f => f.id === matched.facility);
         if (fac) resolvedFacility = fac.company_name;
       }
 
@@ -245,7 +278,7 @@ export default function OstrabacusAssistant() {
       };
 
       setAwaitingConfirmation({ params, targetServiceId });
-      setExpanded(true); // open log so user sees the summary
+      setExpanded(true);
 
       addEntry("ai",
         `📋 Booking:\n• ${params.service_name} at ${params.facility_name}\n• ${params.requested_date} · ${params.requested_time}\n• ${PATIENT_NAME} · ${PATIENT_PHONE}\n\nSay YES to confirm or NO to cancel.`
@@ -253,13 +286,40 @@ export default function OstrabacusAssistant() {
 
       liveRef.current?.sendToolResponse(callId, name, {
         status: "awaiting_confirmation",
-        message: `I've collected all details. ${params.service_name} at ${params.facility_name} on ${params.requested_date} at ${params.requested_time}. Say yes to confirm or no to cancel.`
+        prompt: "Please say YES to confirm the booking, or NO to cancel."
       });
       return;
     }
 
+    if (name === "confirm_booking") {
+      // Triggered by voice: user said "yes" — read from ref, not stale closure
+      const pending = awaitingConfirmationRef.current;
+      if (pending) {
+        await submitBooking();
+        liveRef.current?.sendToolResponse(callId, name, { status: "done" });
+      } else {
+        liveRef.current?.sendToolResponse(callId, name, { success: false, error: "No pending booking." });
+      }
+      return;
+    }
+
+    if (name === "cancel_booking") {
+      const pending = awaitingConfirmationRef.current;
+      if (pending) {
+        resetBookingSession();
+        setAwaitingConfirmation(null);
+        addEntry("system", "❌ Booking cancelled.");
+        liveRef.current?.sendToolResponse(callId, name, { success: true });
+      } else {
+        liveRef.current?.sendToolResponse(callId, name, { success: false, error: "No pending booking." });
+      }
+      return;
+    }
+
     liveRef.current?.sendToolResponse(callId, name, { success: false, error: "Unknown tool" });
-  }, [services, facilities, navigate, addEntry]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [services, facilities, navigate, addEntry, submitBooking, resetBookingSession]);
+  // ↑ awaitingConfirmation intentionally omitted — we read from awaitingConfirmationRef instead
 
   // ── Open session ───────────────────────────────────────────────────────────
   const openSession = useCallback(async () => {
@@ -285,6 +345,10 @@ export default function OstrabacusAssistant() {
       return { id: String(s.id), name: s.name, facilityName: fac?.company_name ?? "Unknown" };
     });
 
+    const availableMedicines = medicines.map(m => {
+      return { id: String(m.id), name: m.medicine_name || m.name, price: m.price };
+    });
+
     // Guard wrapper: discards callbacks from orphaned sessions (StrictMode / rapid clicks)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const guard = <T extends (...args: any[]) => void>(fn: T) => (...args: Parameters<T>) => {
@@ -300,6 +364,7 @@ export default function OstrabacusAssistant() {
         availableLocations: locations.map(l => l.location_name),
         availableFacilities: facilities.map(f => f.company_name),
         availableServices,
+        availableMedicines,
         pageContext
       }),
       {
@@ -341,7 +406,7 @@ export default function OstrabacusAssistant() {
     liveRef.current = session;
     isOpeningRef.current = false;
     await session.connect();
-  }, [locations, facilities, services, pageContext, executeTool, addEntry]);
+  }, [locations, facilities, services, medicines, pageContext, executeTool, addEntry]);
 
   const closeSession = useCallback(() => {
     // Increment generation so any in-flight openSession callbacks self-discard

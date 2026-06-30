@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Search, Pill, ChevronDown, AlertCircle } from "lucide-react";
 import { motion } from "motion/react";
 import { api } from "@/src/client/services/api";
+import { useOstrabacus } from "@/src/ai/OstrabacusContext";
 
 interface Medicine {
   id: number | string;
@@ -30,6 +31,36 @@ export function Medicines() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filteredMedicines, setFilteredMedicines] = useState<Medicine[]>([]);
+
+  const { setPageContext } = useOstrabacus();
+
+  // Set pageContext for Ostrabacus AI to read available medicines on this page
+  useEffect(() => {
+    if (filteredMedicines.length > 0) {
+      setPageContext({
+        type: "medicines",
+        data: {
+          availableMedicines: filteredMedicines.map((m) => ({
+            name: m.medicine_name || m.name,
+            dosage: m.dosage,
+            price: m.price,
+            genericName: m.generic_name,
+            brandName: m.brand_name,
+          })),
+        },
+      });
+    } else {
+      setPageContext({
+        type: "medicines",
+        data: {
+          availableMedicines: [],
+        },
+      });
+    }
+    return () => {
+      setPageContext(null);
+    };
+  }, [filteredMedicines, setPageContext]);
 
   // Fetch medicines and categories on mount
   useEffect(() => {

@@ -37,14 +37,14 @@ State Machine Intents & Strategies:
    - tool_called: "fetch_resources"
    - parameters:
      - facility_type: "clinic" | "pharmacy" | "hospital" | "medicines" | null
-     - status: "open_now" | "all" | null
+     - status: "open_now" | null
      - location: matched location name from Available Locations OR "near me" if they ask for things nearby or specify distance, otherwise null.
    - execution_strategy: "BACKGROUND_PREFILL"
 
 2. NAVIGATE:
    - tool_called: "navigate_to"
    - parameters:
-     - page_route: "/search" (for facilities) | "/booking" (for services) | "/medicines" | "/home"
+     - page_route: "/search" (for facilities) | "/booking" (for services) | "/medicines" (for medicines) | "/home"
    - execution_strategy: "NAVIGATE"
 
 3. FACILITY_BOOKING / COLLECT_INFO:

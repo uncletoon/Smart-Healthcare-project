@@ -260,7 +260,7 @@ export class GeminiLiveSession {
         config: {
           systemInstruction: this.systemInstruction,
           responseModalities: [Modality.AUDIO],
-          tools: [{ functionDeclarations: OSTRABACUS_TOOLS }],
+          tools: [{ functionDeclarations: OSTRABACUS_TOOLS }] as any,
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } }
           }
@@ -271,6 +271,10 @@ export class GeminiLiveSession {
             this._sendEnabled = true;
             this.callbacks.onStatus("Connected.");
             this.callbacks.onListening();
+            // Trigger a warm greeting from the AI immediately on connect
+            setTimeout(() => {
+              this.sendText("[system] The user just opened the assistant. Greet them warmly and briefly — tell them your name is Ostrabacus AI and mention you can help them find services, navigate, and book appointments. Keep it to 2 sentences.");
+            }, 400);
           },
           onmessage: (msg: any) => this._handleMessage(msg),
           onerror: (err: any) => {
@@ -434,7 +438,7 @@ export const OSTRABACUS_TOOLS = [
       type: "OBJECT",
       properties: {
         facility_type: { type: "STRING", enum: ["clinic", "pharmacy", "hospital"] },
-        status: { type: "STRING", enum: ["open_now", "all"] },
+        status: { type: "STRING", enum: ["open_now"] },
         location: { type: "STRING", description: "City name or 'near me' for geolocation." }
       }
     }
@@ -453,6 +457,16 @@ export const OSTRABACUS_TOOLS = [
       },
       required: ["service_name", "facility_name", "requested_date", "requested_time"]
     }
+  },
+  {
+    name: "confirm_booking",
+    description: "Call this immediately when the user confirms a pending booking by saying YES, okay, confirm, sure, go ahead, or any affirmative response. This submits the booking automatically without any button click.",
+    parameters: { type: "OBJECT", properties: {} }
+  },
+  {
+    name: "cancel_booking",
+    description: "Call this when the user wants to cancel a pending booking by saying NO, cancel, stop, or any negative response.",
+    parameters: { type: "OBJECT", properties: {} }
   }
 ];
 
@@ -464,10 +478,15 @@ export function buildSystemInstruction(context: {
   availableLocations: string[];
   availableFacilities: string[];
   availableServices: Array<{ id?: string; name: string; facilityName: string }>;
+  availableMedicines?: Array<{ id?: string; name: string; price?: number }>;
   pageContext?: { type: string; data: any } | null;
 }): string {
   const svcList = context.availableServices
     .map(s => `"${s.name}" (ID: ${s.id ?? "?"}, Facility: ${s.facilityName})`).join(", ");
+
+  const medList = context.availableMedicines
+    ? context.availableMedicines.map(m => `"${m.name}" (Price: ${m.price ?? "?"} RWF)`).join(", ")
+    : "none loaded yet";
 
   const pageCtx = context.pageContext
     ? `\nCURRENT PAGE (${context.pageContext.type}): ${JSON.stringify(context.pageContext.data)}`
@@ -475,6 +494,7 @@ export function buildSystemInstruction(context: {
 
   return `You are Ostrabacus, a warm and concise AI voice assistant for a healthcare platform in Rwanda.
 Your mission: help visually impaired users navigate the app, find services, and book appointments — entirely by voice.
+Messages prefixed with [system] are internal app directives — follow them silently without reading the brackets aloud.
 
 PRE-FILLED PATIENT CREDENTIALS — never ask for these:
   Name: ${context.patientName} | Phone: ${context.phone}
@@ -483,15 +503,20 @@ AVAILABLE DATA:
   Locations: ${context.availableLocations.join(", ") || "Kigali, Muhanga, Huye, Rubavu"}
   Facilities: ${context.availableFacilities.join(", ") || "various"}
   Services (service → facility): ${svcList || "none loaded yet"}
+  Medicines (name and price): ${medList}
 ${pageCtx}
 
 TOOL USAGE RULES:
 1. navigate_to — use for "go to home/facilities/services/medicines".
 2. view_service — use when the user says "show me", "open", "view", "tell me about", or "details of" a specific service name. Look up the service_id from the Services list above and call this tool immediately.
 3. search_facilities — extract type/status/location from user's words; use "near me" for proximity requests.
-4. open_booking — a service belongs to exactly ONE facility; look it up from Services above (never ask which facility if service is named). Collect service → date → time in order, then call open_booking. Ask one question at a time.
-5. Page reading — if the user asks about details/requirements/price, use CURRENT PAGE context.
-6. Off-topic — politely decline and redirect to healthcare tasks.
+4. open_booking — collect service → date → time. Once all three are ready, speak the booking summary ONCE (service, facility, date, time), then call open_booking. After the tool returns, read the prompt field aloud exactly once — do not add any extra words.
+5. confirm_booking — CRITICAL: when a booking is pending and the user says YES/confirm/okay/sure/go ahead, call this tool IMMEDIATELY without speaking first. After the tool returns, say only "Your appointment has been booked!" — nothing more.
+6. cancel_booking — when a booking is pending and the user says NO/cancel/stop, call this tool immediately. After it returns say only "Booking cancelled."
+7. Page reading — if the user asks about details/requirements/price/medicines, use CURRENT PAGE context.
+8. Off-topic — politely decline and redirect to healthcare tasks.
+
+NO-REPEAT RULE: After calling any tool, do NOT repeat or re-summarise information you already spoke before calling it. Each piece of information is spoken exactly once.
 
 Voice style: be brief, warm, and natural. No bullet lists unless reading details.`;
 }
