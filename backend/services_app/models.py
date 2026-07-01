@@ -12,7 +12,6 @@ class Service(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(max_length=500, blank=False, null=False)
     image = models.ImageField(upload_to='services/', default='services/default.jpg', blank=True, null=True)
-    languages = models.ManyToManyField('facilities.Language', blank=True)
     requirements = models.TextField(blank=True, default='')
     insurances = models.ManyToManyField('facilities.Insurance', blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

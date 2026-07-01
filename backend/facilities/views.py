@@ -1,8 +1,8 @@
 from rest_framework import viewsets
-from .models import Category, Location, Insurance, Language, Facility
+from .models import Category, Location, Insurance, Facility
 from .serializers import (
     CategorySerializer, LocationSerializer, InsuranceSerializer,
-    LanguageSerializer, FacilitySerializer
+    FacilitySerializer
 )
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -16,10 +16,6 @@ class LocationViewSet(viewsets.ModelViewSet):
 class InsuranceViewSet(viewsets.ModelViewSet):
     queryset = Insurance.objects.all()
     serializer_class = InsuranceSerializer
-
-class LanguageViewSet(viewsets.ModelViewSet):
-    queryset = Language.objects.all()
-    serializer_class = LanguageSerializer
 
 class FacilityViewSet(viewsets.ModelViewSet):
     queryset = Facility.objects.all()

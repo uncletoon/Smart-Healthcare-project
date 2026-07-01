@@ -10,7 +10,7 @@ from rest_framework.routers import DefaultRouter
 # the API root at /api/ shows all endpoints.
 from facilities.views import (
     CategoryViewSet, LocationViewSet, InsuranceViewSet,
-    LanguageViewSet, FacilityViewSet,
+    FacilityViewSet,
 )
 from services_app.views import ServiceViewSet, ServiceCategoryViewSet
 from medicines.views import MedicineViewSet, MedicineCategoryViewSet
@@ -20,7 +20,6 @@ router = DefaultRouter()
 router.register(r'categories', CategoryViewSet)
 router.register(r'locations', LocationViewSet)
 router.register(r'insurances', InsuranceViewSet)
-router.register(r'languages', LanguageViewSet)
 router.register(r'facilities', FacilityViewSet)
 router.register(r'services', ServiceViewSet)
 router.register(r'servicecategories', ServiceCategoryViewSet)

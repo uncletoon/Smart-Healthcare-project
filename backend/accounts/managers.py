@@ -27,7 +27,7 @@ class CustomUserManager(BaseUserManager):
         """
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('role', 'adminUser')
+        extra_fields.setdefault('role', 'superAdmin')
         
         # Superuser field constraints validation
         if extra_fields.get('is_staff') is not True:

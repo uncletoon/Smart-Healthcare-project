@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Location, Insurance, Language, Facility
+from .models import Category, Location, Insurance, Facility
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,11 +14,6 @@ class LocationSerializer(serializers.ModelSerializer):
 class InsuranceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Insurance
-        fields = '__all__'
-
-class LanguageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Language
         fields = '__all__'
 
 class FacilitySerializer(serializers.ModelSerializer):
