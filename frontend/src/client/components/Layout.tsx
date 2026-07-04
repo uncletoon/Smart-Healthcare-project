@@ -70,7 +70,7 @@ export function Navbar() {
           {/* <Switch checked={isDarkMode} onChange={toggleDarkMode} /> */}
 
           <Link
-            to="/admin"
+            to="/facility-dashboard"
             className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white block"
           >
             <User size={20} />
@@ -106,7 +106,7 @@ export function Navbar() {
               <hr className="border-white/10" />
 
               <Link
-                to="/admin"
+                to="/facility-dashboard"
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-2 text-lg font-medium hover:text-accent"
               >

@@ -25,27 +25,27 @@ const navItems: NavItem[] = [
   {
     icon: <LayoutGrid size={20} />,
     name: "Overview",
-    path: "/admin",
+    path: "/facility-dashboard",
   },
   {
     icon: <Plug size={20} />,
     name: "Services",
-    path: "/admin/services",
+    path: "/facility-dashboard/services",
   },
   {
     icon: <List size={20} />,
     name: "Medicines",
-    path: "/admin/medicines",
+    path: "/facility-dashboard/medicines",
   },
   {
     icon: <Calendar size={20} />,
     name: "Bookings",
-    path: "/admin/bookings",
+    path: "/facility-dashboard/bookings",
   },
   {
     icon: <PieChart size={20} />,
     name: "Analytics",
-    path: "/admin/analytics",
+    path: "/facility-dashboard/analytics",
   },
 ];
 
@@ -53,7 +53,7 @@ const othersItems: NavItem[] = [
   {
     icon: <UserCircle size={20} />,
     name: "Facility Profile",
-    path: "/admin/profile",
+    path: "/facility-dashboard/profile",
   },
 ];
 
@@ -268,7 +268,7 @@ const AppSidebar: React.FC = () => {
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-        <Link to="/admin">
+        <Link to="/facility-dashboard">
           {isExpanded || isHovered || isMobileOpen ? (
             <img
               src="/LOGO.png"

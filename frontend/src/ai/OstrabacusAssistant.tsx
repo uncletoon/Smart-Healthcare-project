@@ -215,7 +215,7 @@ export default function OstrabacusAssistant() {
         facilities: "/facilities",
         services: "/services",
         medicines: "/medicines",
-        admin: "/admin"
+        admin: "/facility-dashboard"
       };
       const route = map[args.page] ?? "/";
       addEntry("system", `📍 → ${args.page}`);
@@ -555,7 +555,7 @@ export default function OstrabacusAssistant() {
                             <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
                               <p className="text-red-400 font-bold text-[11px] mb-1">⚠️ Gemini Live API Not Available</p>
                               <p className="text-white/60 text-[10px] leading-relaxed mb-2">
-                                Your API key (<code className="text-accent text-[9px]">AQ.Ab8R…</code>) does not have access to the <strong>Gemini Live API</strong> (<em>bidiGenerateContent</em>).
+                                Your API key does not have access to the <strong>Gemini Live API</strong> (<em>bidiGenerateContent</em>).
                               </p>
                               <p className="text-white/50 text-[10px] leading-relaxed mb-2">
                                 <strong className="text-white/80">To fix:</strong> Create a new API key at <strong>aistudio.google.com</strong> and ensure Live API access is enabled, or use a Vertex AI key with the Live API enabled.

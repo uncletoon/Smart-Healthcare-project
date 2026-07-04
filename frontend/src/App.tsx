@@ -21,6 +21,13 @@ import Bookings from "./dashboard/pages/Bookings";
 import Analytics from "./dashboard/pages/Analytics";
 import UserProfile from "./dashboard/pages/UserProfile";
 
+// Authentication context and guards
+import { AuthProvider } from "./dashboard/context/AuthContext";
+import ProtectedRoute from "./dashboard/components/auth/ProtectedRoute";
+import GuestRoute from "./dashboard/components/auth/GuestRoute";
+import Login from "./dashboard/pages/auth/Login";
+import Register from "./dashboard/pages/auth/Register";
+
 function RouteScroller() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -44,36 +51,48 @@ function PublicLayout() {
 
 export default function App() {
   return (
-    <OstrabacusProvider>
-      <BrowserRouter>
-        <RouteScroller />
-        <ScrollToTop />
-        <Routes>
-          {/* Admin Dashboard Routes */}
-          <Route path="/admin" element={<AppLayout />}>
-            <Route index element={<DashboardHome />} />
-            <Route path="services" element={<AdminServices />} />
-            <Route path="medicines" element={<AdminMedicines />} />
-            <Route path="bookings" element={<Bookings />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="profile" element={<UserProfile />} />
-          </Route>
+    <AuthProvider>
+      <OstrabacusProvider>
+        <BrowserRouter>
+          <RouteScroller />
+          <ScrollToTop />
+          <Routes>
+            {/* Admin Dashboard Routes */}
+            <Route path="/facility-dashboard" element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<DashboardHome />} />
+              <Route path="services" element={<AdminServices />} />
+              <Route path="medicines" element={<AdminMedicines />} />
+              <Route path="bookings" element={<Bookings />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="profile" element={<UserProfile />} />
+            </Route>
 
-          {/* Public Website Routes */}
-          <Route element={<PublicLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/medicines" element={<Medicines />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/services/:id" element={<ServiceDetail />} />
-            <Route path="/facilities" element={<Facilities />} />
-            <Route path="/facilities/:id" element={<FacilityDetail />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/emergency" element={<Services />} />
-          </Route>
-        </Routes>
-        <OstrabacusAssistant />
-      </BrowserRouter>
-    </OstrabacusProvider>
+            {/* Admin Auth Routes */}
+            <Route element={<GuestRoute />}>
+              <Route path="/facility-dashboard/login" element={<Login />} />
+              <Route path="/facility-dashboard/register" element={<Register />} />
+            </Route>
+
+            {/* Public Website Routes */}
+            <Route element={<PublicLayout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/medicines" element={<Medicines />} />
+              <Route path="/services" element={<Services />} />
+              <Route path="/services/:id" element={<ServiceDetail />} />
+              <Route path="/facilities" element={<Facilities />} />
+              <Route path="/facilities/:id" element={<FacilityDetail />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/emergency" element={<Services />} />
+            </Route>
+          </Routes>
+          <OstrabacusAssistant />
+        </BrowserRouter>
+      </OstrabacusProvider>
+    </AuthProvider>
   );
 }
 
