@@ -1,7 +1,7 @@
-import { Pill, Activity, Calendar, Star, TrendingUp, TrendingDown } from "lucide-react";
+import { Pill, Activity, Calendar, Star, TrendingUp } from "lucide-react";
 import Badge from "../ui/badge/Badge";
 
-export default function EcommerceMetrics() {
+export const HealthcareMetrics = () => {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 md:gap-6">
       {/* <!-- Offered Services Card --> */}
@@ -90,4 +90,5 @@ export default function EcommerceMetrics() {
       </div>
     </div>
   );
-}
+};
+export default HealthcareMetrics;

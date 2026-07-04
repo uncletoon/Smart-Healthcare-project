@@ -5,7 +5,7 @@ import flatpickr from "flatpickr";
 import ChartTab from "../common/ChartTab";
 import { Calendar } from "lucide-react";
 
-export default function StatisticsChart() {
+export const ActivityTrendsChart = () => {
   const datePickerRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -174,4 +174,5 @@ export default function StatisticsChart() {
       </div>
     </div>
   );
-}
+};
+export default ActivityTrendsChart;

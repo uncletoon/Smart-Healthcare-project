@@ -5,7 +5,7 @@ import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { MoreVertical } from "lucide-react";
 import { useState } from "react";
 
-export default function MonthlySalesChart() {
+export const MonthlyVisitsChart = () => {
   const options: ApexOptions = {
     colors: ["#004d40"],
     chart: {
@@ -132,4 +132,5 @@ export default function MonthlySalesChart() {
       </div>
     </div>
   );
-}
+};
+export default MonthlyVisitsChart;

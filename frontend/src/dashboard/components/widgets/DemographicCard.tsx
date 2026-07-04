@@ -37,7 +37,7 @@ const demographicsData: DemographicData[] = [
   },
 ];
 
-export default function DemographicCard() {
+export const DemographicCard = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   function toggleDropdown() {
@@ -107,4 +107,5 @@ export default function DemographicCard() {
       </div>
     </div>
   );
-}
+};
+export default DemographicCard;

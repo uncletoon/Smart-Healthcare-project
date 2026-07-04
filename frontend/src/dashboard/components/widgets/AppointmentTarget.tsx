@@ -5,7 +5,7 @@ import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { MoreVertical } from "lucide-react";
 
-export default function MonthlyTarget() {
+export const AppointmentTarget = () => {
   const series = [92.5];
   const options: ApexOptions = {
     colors: ["#004d40"],
@@ -146,4 +146,5 @@ export default function MonthlyTarget() {
       </div>
     </div>
   );
-}
+};
+export default AppointmentTarget;

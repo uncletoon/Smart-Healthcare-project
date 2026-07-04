@@ -119,7 +119,7 @@ export default function Analytics() {
       <PageBreadcrumb pageTitle="Operations Analytics" />
 
       {/* Stats row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-theme-xs flex items-center gap-4">
           <div className="w-12 h-12 bg-teal-50 dark:bg-teal-950/20 text-teal-600 rounded-xl flex items-center justify-center shrink-0">
             <Users size={22} />
@@ -140,7 +140,8 @@ export default function Analytics() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-theme-xs flex items-center gap-4">
+        {/* Service Fulfillment (Commented out for MVP) */}
+        {/* <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-theme-xs flex items-center gap-4">
           <div className="w-12 h-12 bg-amber-50 dark:bg-amber-950/20 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
             <Activity size={22} />
           </div>
@@ -148,7 +149,7 @@ export default function Analytics() {
             <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase">Service Fulfillment</p>
             <p className="text-xl font-bold text-gray-800 dark:text-white/90 mt-0.5">92.5%</p>
           </div>
-        </div>
+        </div> */}
 
         <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-theme-xs flex items-center gap-4">
           <div className="w-12 h-12 bg-red-50 dark:bg-red-950/20 text-red-600 rounded-xl flex items-center justify-center shrink-0">
@@ -163,15 +164,17 @@ export default function Analytics() {
 
       {/* Charts grids */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-theme-xs">
+        {/* Monthly Patient Visits (Commented out for MVP) */}
+        {/* <div className="lg:col-span-8 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-theme-xs">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-2">Monthly Patient Visits</h3>
           <p className="text-xs text-gray-400 mb-6">Patient intake trends mapped over the last 12 calendar months.</p>
           <div className="max-w-full overflow-hidden">
             <Chart options={trafficOptions} series={trafficSeries} type="bar" height={300} />
           </div>
-        </div>
+        </div> */}
 
-        <div className="lg:col-span-4 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-theme-xs">
+        {/* Service Breakdown (Stretched to span 12 cols during MVP) */}
+        <div className="lg:col-span-12 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-theme-xs">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-2">Service Breakdown</h3>
           <p className="text-xs text-gray-400 mb-6">Distribution of services booked by patients.</p>
           <div className="max-w-full overflow-hidden flex justify-center">
@@ -179,13 +182,14 @@ export default function Analytics() {
           </div>
         </div>
 
-        <div className="lg:col-span-12 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-theme-xs">
+        {/* Weekly Consultation Wait Times (Commented out for MVP) */}
+        {/* <div className="lg:col-span-12 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-theme-xs">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-2">Weekly Consultation Wait Times</h3>
           <p className="text-xs text-gray-400 mb-6">Average minutes spent waiting by patients before receiving care.</p>
           <div className="max-w-full overflow-hidden">
             <Chart options={waitTimeOptions} series={waitTimeSeries} type="line" height={260} />
           </div>
-        </div>
+        </div> */}
       </div>
     </>
   );
