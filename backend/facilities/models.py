@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 try:
     from geopy.distance import geodesic
@@ -25,6 +26,13 @@ class Insurance(models.Model):
 
 
 class Facility(models.Model):
+    admin = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='facility',
+        null=True,
+        blank=True
+    )
     company_name = models.CharField(max_length=255)
     company_categories = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
     company_description = models.TextField(max_length=500, blank=False, null=False)

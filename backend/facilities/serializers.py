@@ -17,6 +17,7 @@ class InsuranceSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class FacilitySerializer(serializers.ModelSerializer):
+    admin = serializers.ReadOnlyField(source='admin.email')
     distance = serializers.SerializerMethodField()
     google_maps_link = serializers.SerializerMethodField()
 

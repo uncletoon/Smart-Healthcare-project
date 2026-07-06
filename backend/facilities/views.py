@@ -4,6 +4,7 @@ from .serializers import (
     CategorySerializer, LocationSerializer, InsuranceSerializer,
     FacilitySerializer
 )
+from .permissions import IsFacilityAdminOwnerOrReadOnly
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
@@ -20,3 +21,7 @@ class InsuranceViewSet(viewsets.ModelViewSet):
 class FacilityViewSet(viewsets.ModelViewSet):
     queryset = Facility.objects.all()
     serializer_class = FacilitySerializer
+    permission_classes = [IsFacilityAdminOwnerOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(admin=self.request.user)
