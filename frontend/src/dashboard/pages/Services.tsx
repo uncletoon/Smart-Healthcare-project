@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
 import Badge from "../components/ui/badge/Badge";
@@ -9,92 +9,56 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
-import { Search, Plus, Trash2, Edit, CheckCircle } from "lucide-react";
+import { Search, Plus, Trash2, Edit, CheckCircle, Loader2 } from "lucide-react";
 import { Modal } from "../components/ui/modal";
 import Button from "../components/ui/button/Button";
 import Input from "../components/form/input/InputField";
 import Label from "../components/form/Label";
-
-interface ServiceItem {
-  id: string;
-  name: string;
-  category: string;
-  cost: string;
-  duration: string;
-  status: "Active" | "Inactive";
-  description: string;
-}
-
-const initialServices: ServiceItem[] = [
-  {
-    id: "1",
-    name: "General Consultation",
-    category: "General",
-    cost: "10,000 RWF",
-    duration: "20 mins",
-    status: "Active",
-    description:
-      "Routine primary care checkup, vitals screening, and general medical advice.",
-  },
-  {
-    id: "2",
-    name: "Complete Blood Count (CBC)",
-    category: "Laboratory",
-    cost: "15,000 RWF",
-    duration: "15 mins",
-    status: "Active",
-    description:
-      "Full hematology blood screening panel performed by lab technicians.",
-  },
-  {
-    id: "3",
-    name: "COVID-19 PCR Testing",
-    category: "Diagnostics",
-    cost: "30,000 RWF",
-    duration: "10 mins",
-    status: "Active",
-    description:
-      "Standard nasal swab molecular test with digital certificate delivery.",
-  },
-  {
-    id: "4",
-    name: "Flu Vaccine Shot",
-    category: "Immunization",
-    cost: "8,000 RWF",
-    duration: "10 mins",
-    status: "Active",
-    description:
-      "Annual influenza immunization shot administered by nursing staff.",
-  },
-  {
-    id: "5",
-    name: "Dental Cleaning & Hygiene",
-    category: "Dental",
-    cost: "25,000 RWF",
-    duration: "45 mins",
-    status: "Inactive",
-    description:
-      "Scaling, polishing, and comprehensive oral health assessment.",
-  },
-];
+import { apiService, Service, ServiceCategory } from "../services/apiService";
 
 export default function Services() {
-  const [services, setServices] = useState<ServiceItem[]>(initialServices);
+  const [services, setServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingService, setEditingService] = useState<ServiceItem | null>(
-    null,
-  );
+  const [editingService, setEditingService] = useState<Service | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
-    category: "General",
-    cost: "",
-    duration: "",
-    status: "Active" as "Active" | "Inactive",
+    category: "",
+    price: "",
+    service_hours: "",
+    is_available: true,
     description: "",
   });
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        setError("");
+        const [servicesData, categoriesData] = await Promise.all([
+          apiService.getServices(),
+          apiService.getServiceCategories(),
+        ]);
+        setServices(servicesData);
+        setCategories(categoriesData);
+
+        if (categoriesData.length > 0) {
+          setFormData((prev) => ({ ...prev, category: categoriesData[0].id.toString() }));
+        }
+      } catch (err: any) {
+        console.error("Failed to load services data:", err);
+        setError("Failed to retrieve services. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -102,62 +66,77 @@ export default function Services() {
     >,
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "is_available" ? value === "true" : value,
+    }));
   };
 
   const openAddModal = () => {
     setEditingService(null);
     setFormData({
       name: "",
-      category: "General",
-      cost: "",
-      duration: "",
-      status: "Active",
+      category: categories.length > 0 ? categories[0].id.toString() : "",
+      price: "",
+      service_hours: "",
+      is_available: true,
       description: "",
     });
     setIsModalOpen(true);
   };
 
-  const openEditModal = (service: ServiceItem) => {
+  const openEditModal = (service: Service) => {
     setEditingService(service);
     setFormData({
       name: service.name,
-      category: service.category,
-      cost: service.cost,
-      duration: service.duration,
-      status: service.status,
+      category: service.category ? service.category.toString() : "",
+      price: service.price,
+      service_hours: service.service_hours,
+      is_available: service.is_available,
       description: service.description,
     });
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to remove this service?")) {
-      setServices((prev) => prev.filter((item) => item.id !== id));
-      triggerNotification("Service deleted successfully!");
+      try {
+        await apiService.deleteService(id);
+        setServices((prev) => prev.filter((item) => item.id !== id));
+        triggerNotification("Service deleted successfully!");
+      } catch (err) {
+        alert("Failed to delete service. Please make sure you are authenticated.");
+      }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingService) {
-      // Update
-      setServices((prev) =>
-        prev.map((item) =>
-          item.id === editingService.id ? { ...item, ...formData } : item,
-        ),
-      );
-      triggerNotification("Service updated successfully!");
-    } else {
-      // Create
-      const newService: ServiceItem = {
-        id: Date.now().toString(),
-        ...formData,
+    try {
+      const payload: Partial<Service> = {
+        name: formData.name,
+        category: formData.category ? parseInt(formData.category) : null,
+        price: formData.price,
+        service_hours: formData.service_hours,
+        is_available: formData.is_available,
+        description: formData.description,
       };
-      setServices((prev) => [...prev, newService]);
-      triggerNotification("New service registered successfully!");
+
+      if (editingService) {
+        const updated = await apiService.updateService(editingService.id, payload);
+        setServices((prev) =>
+          prev.map((item) => (item.id === editingService.id ? updated : item)),
+        );
+        triggerNotification("Service updated successfully!");
+      } else {
+        const created = await apiService.createService(payload);
+        setServices((prev) => [...prev, created]);
+        triggerNotification("New service registered successfully!");
+      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      alert(err.message || "An error occurred while saving the service.");
     }
-    setIsModalOpen(false);
   };
 
   const triggerNotification = (msg: string) => {
@@ -165,11 +144,28 @@ export default function Services() {
     setTimeout(() => setSuccessMessage(""), 3000);
   };
 
-  const filteredServices = services.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const getCategoryName = (categoryId: number | null | undefined) => {
+    if (!categoryId) return "General";
+    const cat = categories.find((c) => c.id === categoryId);
+    return cat ? cat.name : "General";
+  };
+
+  const filteredServices = services.filter((item) => {
+    const query = searchQuery.toLowerCase();
+    const catName = getCategoryName(item.category).toLowerCase();
+    return (
+      item.name.toLowerCase().includes(query) ||
+      catName.includes(query)
+    );
+  });
+
+  if (loading) {
+    return (
+      <div className="flex h-[50vh] w-full items-center justify-center">
+        <Loader2 className="animate-spin text-teal-600 size-10" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -183,6 +179,12 @@ export default function Services() {
         <div className="mb-6 flex items-center gap-3 bg-green-50 border border-green-200 text-green-700 px-5 py-4 rounded-xl shadow-theme-sm transition animate-fade-in">
           <CheckCircle className="shrink-0 size-6" />
           <p className="font-semibold text-sm">{successMessage}</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium">
+          {error}
         </div>
       )}
 
@@ -200,52 +202,53 @@ export default function Services() {
               className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl py-2.5 pl-10 pr-4 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 text-gray-800 dark:text-white"
             />
           </div>
-          <button
+          <Button
             onClick={openAddModal}
-            className="flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl px-5 py-2.5 font-medium text-sm transition"
+            size="md"
+            className="flex items-center justify-center gap-2"
           >
             <Plus size={18} />
             Add Service
-          </button>
+          </Button>
         </div>
 
-        <div className="max-w-full overflow-x-auto">
+        <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/1">
+            <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
               <TableRow>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400"
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Service Name & Description
+                  Service Details
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400"
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Category
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400"
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Cost
+                  Price
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400"
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Est. Duration
+                  Hours / Duration
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs uppercase tracking-wider dark:text-gray-400"
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Status
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-semibold text-gray-500 text-center text-theme-xs uppercase tracking-wider dark:text-gray-400"
+                  className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400"
                 >
                   Actions
                 </TableCell>
@@ -281,22 +284,22 @@ export default function Services() {
                       </div>
                     </TableCell>
                     <TableCell className="px-5 py-4 text-gray-600 dark:text-gray-300 text-sm">
-                      {service.category}
+                      {getCategoryName(service.category)}
                     </TableCell>
                     <TableCell className="px-5 py-4 font-semibold text-gray-800 dark:text-white/90 text-sm">
-                      {service.cost}
+                      {parseFloat(service.price).toLocaleString()} RWF
                     </TableCell>
                     <TableCell className="px-5 py-4 text-gray-600 dark:text-gray-300 text-sm">
-                      {service.duration}
+                      {service.service_hours}
                     </TableCell>
                     <TableCell className="px-5 py-4">
                       <Badge
                         size="sm"
                         color={
-                          service.status === "Active" ? "success" : "error"
+                          service.is_available ? "success" : "error"
                         }
                       >
-                        {service.status}
+                        {service.is_available ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell className="px-5 py-4">
@@ -325,7 +328,6 @@ export default function Services() {
         </div>
       </div>
 
-      {/* CRUD Modal Dialogue */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -362,51 +364,50 @@ export default function Services() {
                   onChange={handleInputChange}
                   className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 text-gray-800 dark:text-white"
                 >
-                  <option value="General">General</option>
-                  <option value="Laboratory">Laboratory</option>
-                  <option value="Diagnostics">Diagnostics</option>
-                  <option value="Immunization">Immunization</option>
-                  <option value="Dental">Dental</option>
-                  <option value="Specialist">Specialist</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <Label>Cost *</Label>
+                <Label>Price (RWF) *</Label>
                 <Input
-                  type="text"
-                  name="cost"
+                  type="number"
+                  name="price"
                   required
-                  value={formData.cost}
+                  value={formData.price}
                   onChange={handleInputChange}
-                  placeholder="e.g., 12,000 RWF"
+                  placeholder="e.g., 12000"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Est. Duration *</Label>
+                <Label>Est. Hours / Duration *</Label>
                 <Input
                   type="text"
-                  name="duration"
+                  name="service_hours"
                   required
-                  value={formData.duration}
+                  value={formData.service_hours}
                   onChange={handleInputChange}
-                  placeholder="e.g., 20 mins"
+                  placeholder="e.g., 20 mins or 24/7"
                 />
               </div>
 
               <div>
-                <Label>Status *</Label>
+                <Label>Availability Status *</Label>
                 <select
-                  name="status"
-                  value={formData.status}
+                  name="is_available"
+                  value={formData.is_available ? "true" : "false"}
                   onChange={handleInputChange}
                   className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 text-gray-800 dark:text-white"
                 >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
+                  <option value="true">Active (Visible to public)</option>
+                  <option value="false">Inactive</option>
                 </select>
               </div>
             </div>

@@ -1,7 +1,12 @@
 import { Pill, Activity, Calendar, Star, TrendingUp } from "lucide-react";
 import Badge from "../ui/badge/Badge";
 
-export const HealthcareMetrics = () => {
+interface HealthcareMetricsProps {
+  servicesCount: number;
+  pendingBookingsCount: number;
+}
+
+export const HealthcareMetrics = ({ servicesCount, pendingBookingsCount }: HealthcareMetricsProps) => {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 md:gap-6">
       {/* <!-- Offered Services Card --> */}
@@ -16,7 +21,7 @@ export const HealthcareMetrics = () => {
               Offered Services
             </span>
             <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-              8
+              {servicesCount}
             </h4>
           </div>
           <Badge color="success">
@@ -58,7 +63,7 @@ export const HealthcareMetrics = () => {
               Pending Bookings
             </span>
             <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-              12
+              {pendingBookingsCount}
             </h4>
           </div>
 

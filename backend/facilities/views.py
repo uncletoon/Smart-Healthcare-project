@@ -23,5 +23,13 @@ class FacilityViewSet(viewsets.ModelViewSet):
     serializer_class = FacilitySerializer
     permission_classes = [IsFacilityAdminOwnerOrReadOnly]
 
+    def get_queryset(self):
+        user = self.request.user
+        # Guests and superadmins see all facilities
+        if not user or not user.is_authenticated or user.is_superuser or getattr(user, 'role', None) == 'superAdmin':
+            return Facility.objects.all()
+        # Facility admins see only their own facility
+        return Facility.objects.filter(admin=user)
+
     def perform_create(self, serializer):
         serializer.save(admin=self.request.user)

@@ -7,9 +7,14 @@ class UserSerializer(serializers.ModelSerializer):
     """
     Serializer to represent and format user profile details.
     """
+    facility_id = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'email', 'full_name', 'phone_number', 'role']
+        fields = ['id', 'email', 'full_name', 'phone_number', 'role', 'facility_id']
+
+    def get_facility_id(self, obj):
+        return obj.facility.id if hasattr(obj, 'facility') else None
 
 
 class RegisterSerializer(serializers.ModelSerializer):
