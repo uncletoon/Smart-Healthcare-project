@@ -26,7 +26,6 @@ import { api } from "../client/services/api";
 // ── Hardcoded patient credentials (dev) ──────────────────────────────────────
 // TODO: swap with logged-in user from auth context
 const PATIENT_NAME = "Test Patient";
-const PATIENT_PHONE = "0788 123 456";
 
 const GEMINI_API_KEY =
   (import.meta as any).env?.VITE_GEMINI_API_KEY ||
@@ -57,6 +56,9 @@ export default function OstrabacusAssistant() {
 
   const navigate = useNavigate();
 
+  // Stored contact phone number dynamically collected from user
+  const [patientPhone, setPatientPhone] = useState(() => localStorage.getItem("ostrabacus_patient_phone") || "");
+
   // ── State ──────────────────────────────────────────────────────────────────
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
   const [streamingText, setStreamingText] = useState(""); // current AI turn (streaming)
@@ -69,7 +71,7 @@ export default function OstrabacusAssistant() {
   const [awaitingConfirmation, setAwaitingConfirmation] = useState<{
     params: {
       service_name: string; facility_name: string;
-      requested_date: string; requested_time: string; notes?: string;
+      requested_date: string; requested_time: string; phone: string; notes?: string;
     };
     targetServiceId: string | number | null;
   } | null>(null);
@@ -163,7 +165,7 @@ export default function OstrabacusAssistant() {
         patient_name: PATIENT_NAME,
         service: serviceId,
         date_time: dateTime,
-        phone: PATIENT_PHONE,
+        phone: params.phone || patientPhone || "",
         notes: params.notes || "Booked via Ostrabacus AI. Contact client to confirm.",
         status: "Pending",
       });
@@ -174,7 +176,7 @@ export default function OstrabacusAssistant() {
         date: params.requested_date,
         time: timePart,
         patientName: PATIENT_NAME,
-        phone: PATIENT_PHONE,
+        phone: params.phone || patientPhone || "",
       });
       resetBookingSession();
       setAwaitingConfirmation(null);
@@ -269,19 +271,36 @@ export default function OstrabacusAssistant() {
         if (fac) resolvedFacility = fac.company_name;
       }
 
+      // Save phone number dynamically if provided by AI
+      if (args.phone) {
+        setPatientPhone(args.phone);
+        localStorage.setItem("ostrabacus_patient_phone", args.phone);
+      }
+
       const params = {
         service_name:   args.service_name,
         facility_name:  resolvedFacility,
         requested_date: args.requested_date,
         requested_time: args.requested_time,
+        phone:          args.phone || "",
         notes:          args.notes ?? ""
       };
+
+      // Set booking info for contextual autofill mapping
+      setPrefilledBookingData({
+        facilityName: params.facility_name,
+        date: params.requested_date,
+        time: params.requested_time,
+        patientName: PATIENT_NAME,
+        phone: params.phone,
+        notes: params.notes || "Booked via Ostrabacus AI."
+      });
 
       setAwaitingConfirmation({ params, targetServiceId });
       setExpanded(true);
 
       addEntry("ai",
-        `📋 Booking:\n• ${params.service_name} at ${params.facility_name}\n• ${params.requested_date} · ${params.requested_time}\n• ${PATIENT_NAME} · ${PATIENT_PHONE}\n\nSay YES to confirm or NO to cancel.`
+        `📋 Booking:\n• ${params.service_name} at ${params.facility_name}\n• ${params.requested_date} · ${params.requested_time}\n• ${PATIENT_NAME} · ${params.phone}\n\nSay YES to confirm or NO to cancel.`
       );
 
       liveRef.current?.sendToolResponse(callId, name, {
@@ -360,7 +379,7 @@ export default function OstrabacusAssistant() {
       GEMINI_API_KEY,
       buildSystemInstruction({
         patientName: PATIENT_NAME,
-        phone: PATIENT_PHONE,
+        phone: patientPhone,
         availableLocations: locations.map(l => l.location_name),
         availableFacilities: facilities.map(f => f.company_name),
         availableServices,

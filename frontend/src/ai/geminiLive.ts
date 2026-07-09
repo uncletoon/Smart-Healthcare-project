@@ -445,7 +445,7 @@ export const OSTRABACUS_TOOLS = [
   },
   {
     name: "open_booking",
-    description: "Open the pre-filled booking form. Call only when you have: service name, date (YYYY-MM-DD), and time (HH:MM). Patient name and phone are always pre-filled — never ask for them.",
+    description: "Open the pre-filled booking form. Call only when you have: service name, date (YYYY-MM-DD), time (HH:MM), and patient contact phone number. Patient name is always pre-filled — never ask for it.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -453,9 +453,10 @@ export const OSTRABACUS_TOOLS = [
         facility_name:  { type: "STRING" },
         requested_date: { type: "STRING", description: "YYYY-MM-DD" },
         requested_time: { type: "STRING", description: "HH:MM:SS" },
+        phone:          { type: "STRING", description: "The patient's contact phone number." },
         notes:          { type: "STRING" }
       },
-      required: ["service_name", "facility_name", "requested_date", "requested_time"]
+      required: ["service_name", "facility_name", "requested_date", "requested_time", "phone"]
     }
   },
   {
@@ -492,12 +493,19 @@ export function buildSystemInstruction(context: {
     ? `\nCURRENT PAGE (${context.pageContext.type}): ${JSON.stringify(context.pageContext.data)}`
     : "";
 
+  const phoneInstruction = context.phone
+    ? `Phone: ${context.phone} (already provided, do not ask for it).`
+    : "Phone: not provided yet. You MUST ask the user for their phone number before calling open_booking.";
+
   return `You are Ostrabacus, a warm and concise AI voice assistant for a healthcare platform in Rwanda.
 Your mission: help visually impaired users navigate the app, find services, and book appointments — entirely by voice.
 Messages prefixed with [system] are internal app directives — follow them silently without reading the brackets aloud.
 
-PRE-FILLED PATIENT CREDENTIALS — never ask for these:
-  Name: ${context.patientName} | Phone: ${context.phone}
+PATIENT NAME (always pre-filled, do not ask for it):
+  Name: ${context.patientName}
+
+CONTACT PHONE NUMBER:
+  ${phoneInstruction}
 
 AVAILABLE DATA:
   Locations: ${context.availableLocations.join(", ") || "Kigali, Muhanga, Huye, Rubavu"}
@@ -510,7 +518,7 @@ TOOL USAGE RULES:
 1. navigate_to — use for "go to home/facilities/services/medicines".
 2. view_service — use when the user says "show me", "open", "view", "tell me about", or "details of" a specific service name. Look up the service_id from the Services list above and call this tool immediately.
 3. search_facilities — extract type/status/location from user's words; use "near me" for proximity requests.
-4. open_booking — collect service → date → time. Once all three are ready, speak the booking summary ONCE (service, facility, date, time), then call open_booking. After the tool returns, read the prompt field aloud exactly once — do not add any extra words.
+4. open_booking — collect service → date → time → phone number. Once all four are ready, speak the booking summary ONCE (service, facility, date, time, phone), then call open_booking. After the tool returns, read the prompt field aloud exactly once — do not add any extra words.
 5. confirm_booking — CRITICAL: when a booking is pending and the user says YES/confirm/okay/sure/go ahead, call this tool IMMEDIATELY without speaking first. After the tool returns, say only "Your appointment has been booked!" — nothing more.
 6. cancel_booking — when a booking is pending and the user says NO/cancel/stop, call this tool immediately. After it returns say only "Booking cancelled."
 7. Page reading — if the user asks about details/requirements/price/medicines, use CURRENT PAGE context.
