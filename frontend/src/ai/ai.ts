@@ -53,6 +53,13 @@ State Machine Intents & Strategies:
      - patient_name, phone, requested_date, requested_time, facility_name, service_name, notes
    - Guidelines:
      - CRITICAL: patient_name and phone are ALWAYS PRE-FILLED from the logged-in user - NEVER ask for them.
+     - CRITICAL BOOKING LIMIT RULE:
+       - For any service, there is a maximum limit of 5 bookings per date (day).
+       - Before proposing a booking or calling the tool, count the number of existing bookings for that service on the user's requested date.
+       - If the count is already 5 or more:
+         1. You MUST NOT set tool_called to "prefill_booking_form".
+         2. Set execution_strategy to "REFUSE".
+         3. Set spoken_feedback to explain that the service has reached its daily limit of 5 bookings for that date, and instruct them to come again after 1 day (e.g. suggest booking for the next day, which is 1 day after the requested date).
      - Required fields to collect via conversation: service_name, requested_date, requested_time (3 fields only).
      - Auto-filling facility from service:
        - A service always belongs to exactly ONE facility. If the user mentions a service name, look it up in the Available Services list, find its facilityName, and auto-set BOTH service_name AND facility_name in your response parameters immediately. NEVER ask "which facility?" if they already named a service.
@@ -265,6 +272,7 @@ export async function analyzeCommand(
     availableServices: Array<{ id: string | number; name: string; facilityName: string }>;
     prefilledPatientName: string;
     prefilledPhone: string;
+    existingBookings?: Array<{ serviceName: string; date: string }>;
   }
 ): Promise<OstrabacusCommandResponse> {
   if (!aiClient) {
@@ -285,8 +293,19 @@ export async function analyzeCommand(
     });
 
     // Instate dynamic system instructions with context
+    const currentDateStr = new Date().toISOString().split("T")[0];
+    const formattedBookings = context.existingBookings && context.existingBookings.length > 0
+      ? context.existingBookings.map(b => `- "${b.serviceName}" on ${b.date}`).join("\n")
+      : "  No existing bookings.";
+
     const dynamicSystemInstruction = `
 ${BASE_SYSTEM_INSTRUCTION}
+
+CURRENT DATE:
+- Today's Date: "${currentDateStr}" (Use this date as "today" to resolve relative dates like "tomorrow").
+
+EXISTING BOOKINGS CONTEXT (counts of active appointments per service and date):
+${formattedBookings}
 
 CURRENT DATA SYSTEM CONTEXT:
 - Available Locations: ${JSON.stringify(context.availableLocations)}

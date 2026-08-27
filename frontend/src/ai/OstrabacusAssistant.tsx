@@ -14,11 +14,25 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useOstrabacus } from "./OstrabacusContext";
-import { GeminiLiveSession, buildSystemInstruction, LiveToolCallEvent } from "./geminiLive";
+import {
+  GeminiLiveSession,
+  buildSystemInstruction,
+  LiveToolCallEvent,
+} from "./geminiLive";
 import { useNavigate } from "react-router-dom";
 import {
-  Mic, MicOff, X, Sparkles, RefreshCw,
-  CheckCircle2, XCircle, Loader2, Radio, ChevronUp, ChevronDown, CalendarCheck
+  Mic,
+  MicOff,
+  X,
+  Sparkles,
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Radio,
+  ChevronUp,
+  ChevronDown,
+  CalendarCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { api } from "../client/services/api";
@@ -29,10 +43,18 @@ const PATIENT_NAME = "Test Patient";
 
 const GEMINI_API_KEY =
   (import.meta as any).env?.VITE_GEMINI_API_KEY ||
-  (import.meta as any).env?.GEMINI_API_KEY || "";
+  (import.meta as any).env?.GEMINI_API_KEY ||
+  "";
 
 // ── Voice states ──────────────────────────────────────────────────────────────
-type VoiceState = "idle" | "connecting" | "listening" | "thinking" | "speaking" | "muted" | "error";
+type VoiceState =
+  | "idle"
+  | "connecting"
+  | "listening"
+  | "thinking"
+  | "speaking"
+  | "muted"
+  | "error";
 
 interface ChatEntry {
   role: "user" | "ai" | "system";
@@ -40,16 +62,49 @@ interface ChatEntry {
   ts: string;
 }
 
-const ts = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const ts = () =>
+  new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 // ── Confirmation keywords ─────────────────────────────────────────────────────
-const CONFIRM = ["yes", "confirm", "okay", "ok", "sure", "proceed", "book", "go ahead", "correct", "yep"];
-const CANCEL  = ["no", "cancel", "stop", "abort", "nevermind", "nope", "don't"];
+const CONFIRM = [
+  "yes",
+  "confirm",
+  "okay",
+  "ok",
+  "sure",
+  "proceed",
+  "book",
+  "go ahead",
+  "correct",
+  "yep",
+];
+const CANCEL = ["no", "cancel", "stop", "abort", "nevermind", "nope", "don't"];
+
+// Helper to log AI interactions dynamically in localStorage for the Admin Insights report
+async function logAiInteraction(
+  query: string,
+  intent: string,
+  executionStrategy: "SUCCESS" | "BLOCKED",
+) {
+  try {
+    await fetch("/api/auth/ai-log/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query, intent, executionStrategy }),
+    });
+  } catch (e) {
+    console.error("Error logging AI interaction to backend", e);
+  }
+}
 
 export default function OstrabacusAssistant() {
   const {
-    isOpen, setIsOpen,
-    setPrefilledBookingData, setShouldOpenModal,
+    isOpen,
+    setIsOpen,
+    setPrefilledBookingData,
+    setShouldOpenModal,
     pageContext,
     resetBookingSession,
   } = useOstrabacus();
@@ -57,7 +112,9 @@ export default function OstrabacusAssistant() {
   const navigate = useNavigate();
 
   // Stored contact phone number dynamically collected from user
-  const [patientPhone, setPatientPhone] = useState(() => localStorage.getItem("ostrabacus_patient_phone") || "");
+  const [patientPhone, setPatientPhone] = useState(
+    () => localStorage.getItem("ostrabacus_patient_phone") || "",
+  );
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
@@ -70,16 +127,23 @@ export default function OstrabacusAssistant() {
 
   const [awaitingConfirmation, setAwaitingConfirmation] = useState<{
     params: {
-      service_name: string; facility_name: string;
-      requested_date: string; requested_time: string; phone: string; notes?: string;
+      service_name: string;
+      facility_name: string;
+      requested_date: string;
+      requested_time: string;
+      phone: string;
+      notes?: string;
     };
     targetServiceId: string | number | null;
   } | null>(null);
 
   const [bookingSuccess, setBookingSuccess] = useState<{
-    serviceName: string; facilityName: string;
-    date: string; time: string;
-    patientName: string; phone: string;
+    serviceName: string;
+    facilityName: string;
+    date: string;
+    time: string;
+    patientName: string;
+    phone: string;
   } | null>(null);
   const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
 
@@ -87,44 +151,76 @@ export default function OstrabacusAssistant() {
   const [facilities, setFacilities] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [medicines, setMedicines] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
+
+  const [aiWidgetEnabled, setAiWidgetEnabled] = useState(true);
 
   // ── Refs ───────────────────────────────────────────────────────────────────
-  const liveRef      = useRef<GeminiLiveSession | null>(null);
-  const sessionGenRef = useRef(0);  // incremented each time we open; callbacks ignore stale gens
+  const liveRef = useRef<GeminiLiveSession | null>(null);
+  const sessionGenRef = useRef(0); // incremented each time we open; callbacks ignore stale gens
   const isOpeningRef = useRef(false); // prevents double-open from StrictMode
-  const logEndRef    = useRef<HTMLDivElement>(null);
-  const inputRef     = useRef<HTMLInputElement>(null);
-  
+  const logEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   // Always-current refs so callbacks captured at session-open never go stale
   const awaitingConfirmationRef = useRef(awaitingConfirmation);
-  const servicesRef             = useRef(services);
-  const facilitiesRef           = useRef(facilities);
-  const medicinesRef            = useRef(medicines);
+  const servicesRef = useRef(services);
+  const facilitiesRef = useRef(facilities);
+  const medicinesRef = useRef(medicines);
+
+  // Load AI configuration settings dynamically from the backend on mount
+  useEffect(() => {
+    async function loadConfig() {
+      try {
+        const res = await fetch("/api/auth/ai-config/");
+        if (res.ok) {
+          const data = await res.json();
+          setAiWidgetEnabled(data.ostrabacus_ai_enabled !== false);
+        }
+      } catch (e) {
+        console.error("Failed to load AI widget config from backend", e);
+      }
+    }
+    loadConfig();
+  }, []);
 
   // ── Fetch DB context ───────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
-        const [l, f, s, m] = await Promise.all([
+        const [l, f, s, m, b] = await Promise.all([
           api.getLocations().catch(() => []),
           api.getFacilities().catch(() => []),
           api.getServices().catch(() => []),
-          api.getMedicines().catch(() => [])
+          api.getMedicines().catch(() => []),
+          api.getBookings().catch(() => []),
         ]);
         setLocations(l);
         setFacilities(f);
         setServices(s);
         const medicinesList = Array.isArray(m) ? m : m?.results || [];
         setMedicines(medicinesList);
-      } catch (e) { console.error("Ostrabacus context error", e); }
+        const bookingsList = Array.isArray(b) ? b : b?.results || [];
+        setBookings(bookingsList);
+      } catch (e) {
+        console.error("Ostrabacus context error", e);
+      }
     })();
   }, []);
 
   // Keep always-current refs in sync with state
-  useEffect(() => { awaitingConfirmationRef.current = awaitingConfirmation; }, [awaitingConfirmation]);
-  useEffect(() => { servicesRef.current = services; },   [services]);
-  useEffect(() => { facilitiesRef.current = facilities; }, [facilities]);
-  useEffect(() => { medicinesRef.current = medicines; }, [medicines]);
+  useEffect(() => {
+    awaitingConfirmationRef.current = awaitingConfirmation;
+  }, [awaitingConfirmation]);
+  useEffect(() => {
+    servicesRef.current = services;
+  }, [services]);
+  useEffect(() => {
+    facilitiesRef.current = facilities;
+  }, [facilities]);
+  useEffect(() => {
+    medicinesRef.current = medicines;
+  }, [medicines]);
 
   // ── Auto-scroll ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -133,7 +229,7 @@ export default function OstrabacusAssistant() {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const addEntry = useCallback((role: ChatEntry["role"], text: string) => {
-    setChatLog(prev => [...prev, { role, text, ts: ts() }]);
+    setChatLog((prev) => [...prev, { role, text, ts: ts() }]);
   }, []);
 
   // ── Core booking submission (shared by voice tool + typed confirm) ─────────────
@@ -143,12 +239,18 @@ export default function OstrabacusAssistant() {
     if (!pending) return;
     const { params, targetServiceId } = pending;
 
-    const serviceId = targetServiceId ?? (
-      servicesRef.current.find(s => s.name.toLowerCase().includes(params.service_name.toLowerCase()))?.id ?? null
-    );
+    const serviceId =
+      targetServiceId ??
+      servicesRef.current.find((s) =>
+        s.name.toLowerCase().includes(params.service_name.toLowerCase()),
+      )?.id ??
+      null;
 
     if (!serviceId) {
-      addEntry("system", "⚠️ Could not find service to book. Please open service you want to book.");
+      addEntry(
+        "system",
+        "⚠️ Could not find service to book. Please open service you want to book.",
+      );
       setAwaitingConfirmation(null);
       return;
     }
@@ -166,7 +268,9 @@ export default function OstrabacusAssistant() {
         service: serviceId,
         date_time: dateTime,
         phone: params.phone || patientPhone || "",
-        notes: params.notes || "Booked via Ostrabacus AI. Contact client to confirm.",
+        notes:
+          params.notes ||
+          "Booked via Ostrabacus AI. Contact client to confirm.",
         status: "Pending",
       });
 
@@ -181,163 +285,301 @@ export default function OstrabacusAssistant() {
       resetBookingSession();
       setAwaitingConfirmation(null);
       addEntry("system", "✅ Appointment booked successfully!");
+      // Refresh local bookings list to sync AI context immediately
+      api.getBookings().then((b) => {
+        const bookingsList = Array.isArray(b) ? b : b?.results || [];
+        setBookings(bookingsList);
+        if (liveRef.current) {
+          const activeBookings = bookingsList
+            .filter((x: any) => x.status !== "Cancelled" && x.status !== "Completed")
+            .map((x: any) => `- "${x.service_name}" on ${x.date_time ? (x.date_time.includes("T") ? x.date_time.split("T")[0] : x.date_time.split(" ")[0]) : ""}`)
+            .join("\n");
+          liveRef.current.sendText(`[system] Context update: The bookings list has changed. The active bookings are now:\n${activeBookings || "No bookings scheduled yet."}`);
+        }
+      }).catch(() => {});
     } catch (err: any) {
-      addEntry("system", `❌ Booking failed: ${err?.message ?? "Please try again."}`);
+      addEntry(
+        "system",
+        `❌ Booking failed: ${err?.message ?? "Please try again."}`,
+      );
     } finally {
       setIsBookingSubmitting(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetBookingSession, addEntry]); // refs are stable — awaitingConfirmation/services not needed
 
-
   // ── Booking confirmation (text / button path) ───────────────────────────
-  const handleConfirmation = useCallback(async (text: string): Promise<boolean> => {
-    if (!awaitingConfirmation) return false;
-    const norm = text.toLowerCase().trim();
-    const isYes = CONFIRM.some(k => norm.includes(k));
-    const isNo  = CANCEL.some(k => norm.includes(k));
+  const handleConfirmation = useCallback(
+    async (text: string): Promise<boolean> => {
+      if (!awaitingConfirmation) return false;
+      const norm = text.toLowerCase().trim();
+      const isYes = CONFIRM.some((k) => norm.includes(k));
+      const isNo = CANCEL.some((k) => norm.includes(k));
 
-    if (isYes) { await submitBooking(); return true; }
-    if (isNo) {
-      resetBookingSession();
-      setAwaitingConfirmation(null);
-      addEntry("system", "❌ Booking cancelled.");
-      return true;
-    }
-    return false;
-  }, [awaitingConfirmation, submitBooking, resetBookingSession, addEntry]);
-
-  // ── Tool execution ─────────────────────────────────────────────────────────
-  const executeTool = useCallback(async (event: LiveToolCallEvent) => {
-    const { name, args, callId } = event;
-
-    if (name === "navigate_to") {
-      const map: Record<string, string> = {
-        home: "/",
-        facilities: "/facilities",
-        services: "/services",
-        medicines: "/medicines",
-        admin: "/facility-dashboard"
-      };
-      const route = map[args.page] ?? "/";
-      addEntry("system", `📍 → ${args.page}`);
-      navigate(route);
-      liveRef.current?.sendToolResponse(callId, name, { success: true });
-      return;
-    }
-
-    if (name === "view_service") {
-      const { service_id, service_name } = args;
-      // Fallback: try to resolve by name if the model gives a non-numeric id
-      let resolvedId = service_id;
-      if (!resolvedId || isNaN(Number(resolvedId))) {
-        const matched = services.find(s =>
-          s.name.toLowerCase().includes((service_name ?? "").toLowerCase())
-        );
-        resolvedId = matched ? String(matched.id) : null;
-      }
-      if (resolvedId) {
-        addEntry("system", `📄 Opening service: ${service_name ?? service_id}`);
-        navigate(`/services/${resolvedId}`);
-        liveRef.current?.sendToolResponse(callId, name, { success: true, service_id: resolvedId });
-      } else {
-        addEntry("system", `⚠️ Could not find service "${service_name}".`);
-        liveRef.current?.sendToolResponse(callId, name, { success: false, error: "Service not found" });
-      }
-      return;
-    }
-
-    if (name === "search_facilities") {
-      const p = new URLSearchParams();
-      if (args.facility_type) p.set("type", args.facility_type);
-      if (args.status)        p.set("status", args.status);
-      if (args.location)      p.set("location", args.location);
-      addEntry("system", `🔍 Searching ${args.facility_type ?? "facilities"}…`);
-      navigate(`/facilities?${p.toString()}`);
-      liveRef.current?.sendToolResponse(callId, name, { success: true });
-      return;
-    }
-
-    if (name === "open_booking") {
-      // Resolve facility from service using local data — use ref for always-current services list
-      const svcList = servicesRef.current;
-      const facList = facilitiesRef.current;
-      let resolvedFacility = args.facility_name;
-      let targetServiceId: string | number | null = null;
-      const matched = svcList.find(s => s.name.toLowerCase().includes(args.service_name.toLowerCase()));
-      if (matched) {
-        targetServiceId = matched.id;
-        const fac = facList.find(f => f.id === matched.facility);
-        if (fac) resolvedFacility = fac.company_name;
-      }
-
-      // Save phone number dynamically if provided by AI
-      if (args.phone) {
-        setPatientPhone(args.phone);
-        localStorage.setItem("ostrabacus_patient_phone", args.phone);
-      }
-
-      const params = {
-        service_name:   args.service_name,
-        facility_name:  resolvedFacility,
-        requested_date: args.requested_date,
-        requested_time: args.requested_time,
-        phone:          args.phone || "",
-        notes:          args.notes ?? ""
-      };
-
-      // Set booking info for contextual autofill mapping
-      setPrefilledBookingData({
-        facilityName: params.facility_name,
-        date: params.requested_date,
-        time: params.requested_time,
-        patientName: PATIENT_NAME,
-        phone: params.phone,
-        notes: params.notes || "Booked via Ostrabacus AI."
-      });
-
-      setAwaitingConfirmation({ params, targetServiceId });
-      setExpanded(true);
-
-      addEntry("ai",
-        `📋 Booking:\n• ${params.service_name} at ${params.facility_name}\n• ${params.requested_date} · ${params.requested_time}\n• ${PATIENT_NAME} · ${params.phone}\n\nSay YES to confirm or NO to cancel.`
-      );
-
-      liveRef.current?.sendToolResponse(callId, name, {
-        status: "awaiting_confirmation",
-        prompt: "Please say YES to confirm the booking, or NO to cancel."
-      });
-      return;
-    }
-
-    if (name === "confirm_booking") {
-      // Triggered by voice: user said "yes" — read from ref, not stale closure
-      const pending = awaitingConfirmationRef.current;
-      if (pending) {
+      if (isYes) {
         await submitBooking();
-        liveRef.current?.sendToolResponse(callId, name, { status: "done" });
-      } else {
-        liveRef.current?.sendToolResponse(callId, name, { success: false, error: "No pending booking." });
+        return true;
       }
-      return;
-    }
-
-    if (name === "cancel_booking") {
-      const pending = awaitingConfirmationRef.current;
-      if (pending) {
+      if (isNo) {
         resetBookingSession();
         setAwaitingConfirmation(null);
         addEntry("system", "❌ Booking cancelled.");
-        liveRef.current?.sendToolResponse(callId, name, { success: true });
-      } else {
-        liveRef.current?.sendToolResponse(callId, name, { success: false, error: "No pending booking." });
+        return true;
       }
-      return;
-    }
+      return false;
+    },
+    [awaitingConfirmation, submitBooking, resetBookingSession, addEntry],
+  );
 
-    liveRef.current?.sendToolResponse(callId, name, { success: false, error: "Unknown tool" });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [services, facilities, navigate, addEntry, submitBooking, resetBookingSession]);
+  // ── Tool execution ─────────────────────────────────────────────────────────
+  const executeTool = useCallback(
+    async (event: LiveToolCallEvent) => {
+      const { name, args, callId } = event;
+
+      if (name === "navigate_to") {
+        const map: Record<string, string> = {
+          home: "/",
+          facilities: "/facilities",
+          services: "/services",
+          medicines: "/medicines",
+          admin: "/facility-dashboard",
+        };
+        const route = map[args.page] ?? "/";
+        addEntry("system", ` ${args.page}`);
+        navigate(route);
+        liveRef.current?.sendToolResponse(callId, name, { success: true });
+        logAiInteraction(`Navigate to ${args.page}`, "NAVIGATE", "SUCCESS");
+        return;
+      }
+
+      if (name === "view_service") {
+        const { service_id, service_name } = args;
+        // Fallback: try to resolve by name if the model gives a non-numeric id
+        let resolvedId = service_id;
+        if (!resolvedId || isNaN(Number(resolvedId))) {
+          const cleanArg = (service_name ?? "")
+            .replace(/\(Voice Booking:.*?\)/gi, "")
+            .trim()
+            .toLowerCase();
+          const matched = services.find((s) => {
+            const dbName = s.name.toLowerCase();
+            return dbName.includes(cleanArg) || cleanArg.includes(dbName);
+          });
+          resolvedId = matched ? String(matched.id) : null;
+        }
+        if (resolvedId) {
+          addEntry(
+            "system",
+            `📄 Opening service: ${service_name ?? service_id}`,
+          );
+          navigate(`/services/${resolvedId}`);
+          liveRef.current?.sendToolResponse(callId, name, {
+            success: true,
+            service_id: resolvedId,
+          });
+          logAiInteraction(
+            `View service: ${service_name || service_id}`,
+            "VIEW_SERVICE",
+            "SUCCESS",
+          );
+        } else {
+          addEntry("system", `⚠️ Could not find service "${service_name}".`);
+          liveRef.current?.sendToolResponse(callId, name, {
+            success: false,
+            error: "Service not found",
+          });
+          logAiInteraction(
+            `View service failed: ${service_name || service_id}`,
+            "VIEW_SERVICE",
+            "BLOCKED",
+          );
+        }
+        return;
+      }
+
+      if (name === "search_facilities") {
+        const p = new URLSearchParams();
+        if (args.facility_type) p.set("type", args.facility_type);
+        if (args.status) p.set("status", args.status);
+        if (args.location) p.set("location", args.location);
+        addEntry(
+          "system",
+          `🔍 Searching ${args.facility_type ?? "facilities"}…`,
+        );
+        navigate(`/facilities?${p.toString()}`);
+        liveRef.current?.sendToolResponse(callId, name, { success: true });
+        logAiInteraction(
+          `Search ${args.facility_type || "facilities"} in ${args.location || "any"}`,
+          "SEARCH_FACILITIES",
+          "SUCCESS",
+        );
+        return;
+      }
+
+      if (name === "open_booking") {
+        // Resolve facility from service using local data — use ref for always-current services list
+        const svcList = servicesRef.current;
+        const facList = facilitiesRef.current;
+        let resolvedFacility = args.facility_name;
+        let targetServiceId: string | number | null = null;
+
+        const cleanArg = (args.service_name ?? "")
+          .replace(/\(Voice Booking:.*?\)/gi, "")
+          .trim()
+          .toLowerCase();
+        const matched = svcList.find((s) => {
+          const dbName = s.name.toLowerCase();
+          return dbName.includes(cleanArg) || cleanArg.includes(dbName);
+        });
+
+        if (matched) {
+          targetServiceId = matched.id;
+          const fac = facList.find((f) => f.id === matched.facility);
+          if (fac) resolvedFacility = fac.company_name;
+        }
+
+        // Admin Configuration Checks (live from API)
+        let aiBookingsAllowed = true;
+        let disabledServices: string[] = [];
+        try {
+          const configRes = await fetch("/api/auth/ai-config/");
+          if (configRes.ok) {
+            const configData = await configRes.json();
+            aiBookingsAllowed =
+              configData.ostrabacus_ai_bookings_allowed !== false;
+            disabledServices = configData.ostrabacus_disabled_services || [];
+          }
+        } catch (e) {
+          console.error("Failed to load configs from server", e);
+        }
+        const isServiceBlocked =
+          targetServiceId && disabledServices.includes(String(targetServiceId));
+
+        if (!aiBookingsAllowed) {
+          addEntry(
+            "ai",
+            "⚠️ Booking via AI is disabled globally by the administrator.",
+          );
+          liveRef.current?.sendToolResponse(callId, name, {
+            success: false,
+            error: "Booking via AI is globally disabled by the admin.",
+          });
+          logAiInteraction(
+            `Attempted booking for ${args.service_name}`,
+            "PREFILL_BOOKING",
+            "BLOCKED",
+          );
+          return;
+        }
+
+        if (isServiceBlocked) {
+          addEntry(
+            "ai",
+            `⚠️ Voice booking is disabled for "${args.service_name}" by the administrator.`,
+          );
+          liveRef.current?.sendToolResponse(callId, name, {
+            success: false,
+            error: `Booking via AI is disabled for ${args.service_name}.`,
+          });
+          logAiInteraction(
+            `Attempted booking for ${args.service_name}`,
+            "PREFILL_BOOKING",
+            "BLOCKED",
+          );
+          return;
+        }
+
+        // Save phone number dynamically if provided by AI
+        if (args.phone) {
+          setPatientPhone(args.phone);
+          localStorage.setItem("ostrabacus_patient_phone", args.phone);
+        }
+
+        const params = {
+          service_name: args.service_name,
+          facility_name: resolvedFacility,
+          requested_date: args.requested_date,
+          requested_time: args.requested_time,
+          phone: args.phone || "",
+          notes: args.notes ?? "",
+        };
+
+        // Set booking info for contextual autofill mapping
+        setPrefilledBookingData({
+          facilityName: params.facility_name,
+          date: params.requested_date,
+          time: params.requested_time,
+          patientName: PATIENT_NAME,
+          phone: params.phone,
+          notes: params.notes || "Booked via Ostrabacus AI.",
+        });
+
+        setAwaitingConfirmation({ params, targetServiceId });
+        setExpanded(true);
+
+        addEntry(
+          "ai",
+          `📋 Booking:\n• ${params.service_name} at ${params.facility_name}\n• ${params.requested_date} · ${params.requested_time}\n• ${PATIENT_NAME} · ${params.phone}\n\nSay YES to confirm or NO to cancel.`,
+        );
+
+        liveRef.current?.sendToolResponse(callId, name, {
+          status: "awaiting_confirmation",
+          prompt: "Please say YES to confirm the booking, or NO to cancel.",
+        });
+        logAiInteraction(
+          `Prefilled booking for ${params.service_name}`,
+          "PREFILL_BOOKING",
+          "SUCCESS",
+        );
+        return;
+      }
+
+      if (name === "confirm_booking") {
+        // Triggered by voice: user said "yes" — read from ref, not stale closure
+        const pending = awaitingConfirmationRef.current;
+        if (pending) {
+          await submitBooking();
+          liveRef.current?.sendToolResponse(callId, name, { status: "done" });
+        } else {
+          liveRef.current?.sendToolResponse(callId, name, {
+            success: false,
+            error: "No pending booking.",
+          });
+        }
+        return;
+      }
+
+      if (name === "cancel_booking") {
+        const pending = awaitingConfirmationRef.current;
+        if (pending) {
+          resetBookingSession();
+          setAwaitingConfirmation(null);
+          addEntry("system", "❌ Booking cancelled.");
+          liveRef.current?.sendToolResponse(callId, name, { success: true });
+        } else {
+          liveRef.current?.sendToolResponse(callId, name, {
+            success: false,
+            error: "No pending booking.",
+          });
+        }
+        return;
+      }
+
+      liveRef.current?.sendToolResponse(callId, name, {
+        success: false,
+        error: "Unknown tool",
+      });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [
+      services,
+      facilities,
+      navigate,
+      addEntry,
+      submitBooking,
+      resetBookingSession,
+    ],
+  );
   // ↑ awaitingConfirmation intentionally omitted — we read from awaitingConfirmationRef instead
 
   // ── Open session ───────────────────────────────────────────────────────────
@@ -349,7 +591,10 @@ export default function OstrabacusAssistant() {
     if (!GEMINI_API_KEY) {
       isOpeningRef.current = false;
       setVoiceState("error");
-      addEntry("system", "⚠️ No Gemini API key. Set VITE_GEMINI_API_KEY in .env");
+      addEntry(
+        "system",
+        "⚠️ No Gemini API key. Set VITE_GEMINI_API_KEY in .env",
+      );
       return;
     }
 
@@ -359,42 +604,78 @@ export default function OstrabacusAssistant() {
     setVoiceState("connecting");
     setStreamingText("");
 
-    const availableServices = services.map(s => {
-      const fac = facilities.find(f => f.id === s.facility);
-      return { id: String(s.id), name: s.name, facilityName: fac?.company_name ?? "Unknown" };
+    let disabledServices: string[] = [];
+    let aiBookingsAllowed = true;
+    try {
+      const configRes = await fetch("/api/auth/ai-config/");
+      if (configRes.ok) {
+        const configData = await configRes.json();
+        disabledServices = configData.ostrabacus_disabled_services || [];
+        aiBookingsAllowed = configData.ostrabacus_ai_bookings_allowed !== false;
+      }
+    } catch (e) {
+      console.error("Failed to load session configs from server", e);
+    }
+
+    const availableServices = services.map((s) => {
+      const fac = facilities.find((f) => f.id === s.facility);
+      const isVoiceBlocked =
+        !aiBookingsAllowed || disabledServices.includes(String(s.id));
+      return {
+        id: String(s.id),
+        name: s.name + (isVoiceBlocked ? " (Voice Booking: DISABLED)" : ""),
+        facilityName: fac?.company_name ?? "Unknown",
+      };
     });
 
-    const availableMedicines = medicines.map(m => {
-      return { id: String(m.id), name: m.medicine_name || m.name, price: m.price };
+    const availableMedicines = medicines.map((m) => {
+      return {
+        id: String(m.id),
+        name: m.medicine_name || m.name,
+        price: m.price,
+      };
     });
 
     // Guard wrapper: discards callbacks from orphaned sessions (StrictMode / rapid clicks)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const guard = <T extends (...args: any[]) => void>(fn: T) => (...args: Parameters<T>) => {
-      if (sessionGenRef.current !== myGen) return; // stale — discard
-      fn(...args);
-    };
+    const guard =
+      <T extends (...args: any[]) => void>(fn: T) =>
+      (...args: Parameters<T>) => {
+        if (sessionGenRef.current !== myGen) return; // stale — discard
+        fn(...args);
+      };
+
+    const existingBookings = bookings
+      .filter((b) => b.status !== "Cancelled" && b.status !== "Completed")
+      .map((b) => ({
+        serviceName: b.service_name,
+        date: b.date_time ? (b.date_time.includes("T") ? b.date_time.split("T")[0] : b.date_time.split(" ")[0]) : "",
+      }));
 
     const session = new GeminiLiveSession(
       GEMINI_API_KEY,
       buildSystemInstruction({
         patientName: PATIENT_NAME,
         phone: patientPhone,
-        availableLocations: locations.map(l => l.location_name),
-        availableFacilities: facilities.map(f => f.company_name),
+        availableLocations: locations.map((l) => l.location_name),
+        availableFacilities: facilities.map((f) => f.company_name),
         availableServices,
         availableMedicines,
-        pageContext
+        pageContext,
+        existingBookings,
       }),
       {
-        onListening:    guard(() => setVoiceState("listening")),
-        onSpeaking:     guard(() => setVoiceState("speaking")),
+        onListening: guard(() => setVoiceState("listening")),
+        onSpeaking: guard(() => setVoiceState("speaking")),
         onTurnComplete: guard(() => setVoiceState("listening")),
-        onTranscript:   guard((t) => setStreamingText(prev => prev + t)),
-        onToolCall:     guard((e) => executeTool(e)),
-        onStatus:       guard((m) => addEntry("system", m)),
+        onTranscript: guard((t) => setStreamingText((prev) => prev + t)),
+        onToolCall: guard((e) => executeTool(e)),
+        onStatus: guard((m) => addEntry("system", m)),
         onError: guard((m: string) => {
-          const isBlocked = m.includes('bidiGenerateContent') || m.includes('not found') || m.includes('code 1');
+          const isBlocked =
+            m.includes("bidiGenerateContent") ||
+            m.includes("not found") ||
+            m.includes("code 1");
           if (isBlocked) {
             setLiveApiBlocked(true);
             setExpanded(true);
@@ -404,15 +685,15 @@ export default function OstrabacusAssistant() {
           liveRef.current = null;
           isOpeningRef.current = false;
         }),
-        onClose:        guard(() => {
+        onClose: guard(() => {
           // Server-initiated close: ensure full teardown then update UI
           const ref = liveRef.current;
           liveRef.current = null;
           isOpeningRef.current = false;
           ref?.close(); // safe — close() is idempotent
           setVoiceState("idle");
-        })
-      } 
+        }),
+      },
     );
 
     // If StrictMode or rapid clicks closed us before we finished building
@@ -425,7 +706,16 @@ export default function OstrabacusAssistant() {
     liveRef.current = session;
     isOpeningRef.current = false;
     await session.connect();
-  }, [locations, facilities, services, medicines, pageContext, executeTool, addEntry]);
+  }, [
+    locations,
+    facilities,
+    services,
+    medicines,
+    bookings,
+    pageContext,
+    executeTool,
+    addEntry,
+  ]);
 
   const closeSession = useCallback(() => {
     // Increment generation so any in-flight openSession callbacks self-discard
@@ -455,7 +745,7 @@ export default function OstrabacusAssistant() {
       liveRef.current = null;
       ref?.close();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // ── Update AI about page context changes (no reconnect needed) ─────────────
@@ -463,7 +753,7 @@ export default function OstrabacusAssistant() {
     if (!isOpen || !pageContext || !liveRef.current) return;
     const summary = `[Context update] User navigated to a ${pageContext.type} page: ${JSON.stringify(pageContext.data)}`;
     liveRef.current.sendText(summary);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageContext]);
 
   // ── Flush streaming text into log when AI finishes its turn ───────────────
@@ -474,7 +764,7 @@ export default function OstrabacusAssistant() {
       addEntry("ai", streamingText.trim());
       setStreamingText("");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceState]);
 
   // ── Mute ──────────────────────────────────────────────────────────────────
@@ -486,14 +776,15 @@ export default function OstrabacusAssistant() {
     if (next) setVoiceState("muted");
   };
 
-    const handleTextSubmit = (e: React.FormEvent) => {
+  const handleTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const text = textInput.trim();
     if (!text) return;
 
     const doConfirm = async () => {
-      if (awaitingConfirmation && await handleConfirmation(text)) {
-        setTextInput(""); return;
+      if (awaitingConfirmation && (await handleConfirmation(text))) {
+        setTextInput("");
+        return;
       }
       addEntry("user", text);
       setTextInput("");
@@ -505,19 +796,24 @@ export default function OstrabacusAssistant() {
 
   // ── Voice state config ─────────────────────────────────────────────────────
   const STATE: Record<VoiceState, { label: string; dot: string }> = {
-    idle:       { label: "Not connected",       dot: "bg-white/20" },
-    connecting: { label: "Connecting…",          dot: "bg-yellow-400 animate-pulse" },
-    listening:  { label: "Listening",            dot: "bg-accent animate-pulse" },
-    thinking:   { label: "Processing…",          dot: "bg-blue-400 animate-pulse" },
-    speaking:   { label: "Speaking",             dot: "bg-purple-400 animate-pulse" },
-    muted:      { label: "Muted",                dot: "bg-white/30" },
-    error:      { label: liveApiBlocked ? "Live API not available" : "Error", dot: "bg-red-500" },
+    idle: { label: "Not connected", dot: "bg-white/20" },
+    connecting: { label: "Connecting…", dot: "bg-yellow-400 animate-pulse" },
+    listening: { label: "Listening", dot: "bg-accent animate-pulse" },
+    thinking: { label: "Processing…", dot: "bg-blue-400 animate-pulse" },
+    speaking: { label: "Speaking", dot: "bg-purple-400 animate-pulse" },
+    muted: { label: "Muted", dot: "bg-white/30" },
+    error: {
+      label: liveApiBlocked ? "Live API not available" : "Error",
+      dot: "bg-red-500",
+    },
   };
 
   const s = STATE[voiceState];
 
   // Most recent AI/user message to show in collapsed view
-  const lastMessage = [...chatLog].reverse().find(e => e.role !== "system");
+  const lastMessage = [...chatLog].reverse().find((e) => e.role !== "system");
+
+  if (!aiWidgetEnabled) return null;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -538,8 +834,13 @@ export default function OstrabacusAssistant() {
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent" />
             </span>
             <Sparkles size={16} className="text-accent" />
-            <span className="text-sm font-semibold tracking-tight">Ostrabacus AI</span>
-            <Mic size={16} className="text-white/60 group-hover:text-accent transition-colors" />
+            <span className="text-sm font-semibold tracking-tight">
+              Ostrabacus AI
+            </span>
+            <Mic
+              size={16}
+              className="text-white/60 group-hover:text-accent transition-colors"
+            />
           </motion.button>
         )}
       </AnimatePresence>
@@ -557,7 +858,6 @@ export default function OstrabacusAssistant() {
             aria-label="Ostrabacus AI Voice Bar"
           >
             <div className="bg-emerald-950/95 backdrop-blur-2xl border border-emerald-500/20 border-b-0 rounded-t-2xl shadow-2xl overflow-hidden">
-
               {/* ── Expandable log area ─────────────────────────────────── */}
               <AnimatePresence>
                 {expanded && (
@@ -567,25 +867,48 @@ export default function OstrabacusAssistant() {
                     exit={{ height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className={`${bookingSuccess ? "h-[340px]" : "h-[220px]"} overflow-y-auto px-4 pt-3 pb-2 space-y-2 flex flex-col`}>
+                    <div
+                      className={`${bookingSuccess ? "h-[340px]" : "h-[220px]"} overflow-y-auto px-4 pt-3 pb-2 space-y-2 flex flex-col`}
+                    >
                       {chatLog.length === 0 ? (
                         liveApiBlocked ? (
                           <div className="flex-1 flex flex-col justify-center gap-3 text-xs px-2">
                             <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
-                              <p className="text-red-400 font-bold text-[11px] mb-1">⚠️ Gemini Live API Not Available</p>
+                              <p className="text-red-400 font-bold text-[11px] mb-1">
+                                ⚠️ Gemini Live API Not Available
+                              </p>
                               <p className="text-white/60 text-[10px] leading-relaxed mb-2">
-                                Your API key does not have access to the <strong>Gemini Live API</strong> (<em>bidiGenerateContent</em>).
+                                Your API key does not have access to the{" "}
+                                <strong>Gemini Live API</strong> (
+                                <em>bidiGenerateContent</em>).
                               </p>
                               <p className="text-white/50 text-[10px] leading-relaxed mb-2">
-                                <strong className="text-white/80">To fix:</strong> Create a new API key at <strong>aistudio.google.com</strong> and ensure Live API access is enabled, or use a Vertex AI key with the Live API enabled.
+                                <strong className="text-white/80">
+                                  To fix:
+                                </strong>{" "}
+                                Create a new API key at{" "}
+                                <strong>aistudio.google.com</strong> and ensure
+                                Live API access is enabled, or use a Vertex AI
+                                key with the Live API enabled.
                               </p>
                               <div className="flex gap-2 mt-2">
-                                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer"
-                                  className="flex-1 text-center bg-accent/20 hover:bg-accent/30 text-accent border border-accent/30 rounded-lg py-1.5 text-[9px] font-bold transition-colors">
+                                <a
+                                  href="https://aistudio.google.com/apikey"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex-1 text-center bg-accent/20 hover:bg-accent/30 text-accent border border-accent/30 rounded-lg py-1.5 text-[9px] font-bold transition-colors"
+                                >
                                   Get a Live API Key ↗
                                 </a>
-                                <button onClick={() => { setLiveApiBlocked(false); setChatLog([]); closeSession(); setTimeout(openSession, 300); }}
-                                  className="flex-1 bg-white/5 hover:bg-white/10 text-white/60 rounded-lg py-1.5 text-[9px] font-bold cursor-pointer transition-colors border border-white/10">
+                                <button
+                                  onClick={() => {
+                                    setLiveApiBlocked(false);
+                                    setChatLog([]);
+                                    closeSession();
+                                    setTimeout(openSession, 300);
+                                  }}
+                                  className="flex-1 bg-white/5 hover:bg-white/10 text-white/60 rounded-lg py-1.5 text-[9px] font-bold cursor-pointer transition-colors border border-white/10"
+                                >
                                   Retry
                                 </button>
                               </div>
@@ -605,8 +928,8 @@ export default function OstrabacusAssistant() {
                               entry.role === "user"
                                 ? "self-end bg-accent/20 text-accent rounded-2xl rounded-tr-none px-3 py-1.5 font-semibold"
                                 : entry.role === "system"
-                                ? "self-center text-white/35 italic text-[10px]"
-                                : "self-start bg-white/5 text-white rounded-2xl rounded-tl-none px-3 py-1.5"
+                                  ? "self-center text-white/35 italic text-[10px]"
+                                  : "self-start bg-white/5 text-white rounded-2xl rounded-tl-none px-3 py-1.5"
                             }`}
                           >
                             <p className="whitespace-pre-wrap">{entry.text}</p>
@@ -626,7 +949,9 @@ export default function OstrabacusAssistant() {
                       {isBookingSubmitting && (
                         <div className="self-stretch flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-3 py-2.5 text-[11px]">
                           <span className="w-3.5 h-3.5 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin shrink-0" />
-                          <span className="text-yellow-300">Submitting your appointment…</span>
+                          <span className="text-yellow-300">
+                            Submitting your appointment…
+                          </span>
                         </div>
                       )}
 
@@ -634,15 +959,22 @@ export default function OstrabacusAssistant() {
                       {awaitingConfirmation && !isBookingSubmitting && (
                         <div className="self-stretch bg-accent/10 border border-accent/25 rounded-xl p-3 text-xs">
                           <p className="text-white/70 mb-2 text-[11px]">
-                            Say <strong className="text-accent">YES</strong> to submit the booking or <strong className="text-red-400">NO</strong> to cancel.
+                            Say <strong className="text-accent">YES</strong> to
+                            submit the booking or{" "}
+                            <strong className="text-red-400">NO</strong> to
+                            cancel.
                           </p>
                           <div className="flex gap-2">
-                            <button onClick={() => handleConfirmation("yes")}
-                              className="flex-1 flex items-center justify-center gap-1 bg-accent/20 hover:bg-accent/30 text-accent border border-accent/30 rounded-lg py-1.5 text-[10px] font-bold cursor-pointer transition-colors">
+                            <button
+                              onClick={() => handleConfirmation("yes")}
+                              className="flex-1 flex items-center justify-center gap-1 bg-accent/20 hover:bg-accent/30 text-accent border border-accent/30 rounded-lg py-1.5 text-[10px] font-bold cursor-pointer transition-colors"
+                            >
                               <CheckCircle2 size={11} /> Confirm & Book
                             </button>
-                            <button onClick={() => handleConfirmation("no")}
-                              className="flex-1 flex items-center justify-center gap-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 rounded-lg py-1.5 text-[10px] font-bold cursor-pointer transition-colors">
+                            <button
+                              onClick={() => handleConfirmation("no")}
+                              className="flex-1 flex items-center justify-center gap-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 rounded-lg py-1.5 text-[10px] font-bold cursor-pointer transition-colors"
+                            >
                               <XCircle size={11} /> Cancel
                             </button>
                           </div>
@@ -658,33 +990,52 @@ export default function OstrabacusAssistant() {
                         >
                           <div className="flex items-center gap-2 mb-3">
                             <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center shrink-0">
-                              <CalendarCheck size={16} className="text-green-400" />
+                              <CalendarCheck
+                                size={16}
+                                className="text-green-400"
+                              />
                             </div>
                             <div>
-                              <p className="text-green-400 font-bold text-[11px]">Appointment Requested!</p>
-                              <p className="text-white/50 text-[10px]">Your appointment has been successfully requested. The facility will review and confirm your slot.</p>
+                              <p className="text-green-400 font-bold text-[11px]">
+                                Appointment Requested!
+                              </p>
+                              <p className="text-white/50 text-[10px]">
+                                Your appointment has been successfully
+                                requested. The facility will review and confirm
+                                your slot.
+                              </p>
                             </div>
                           </div>
                           <div className="space-y-1.5 bg-white/5 rounded-lg px-3 py-2 mb-3">
                             <div className="flex justify-between">
                               <span className="text-white/40">Service</span>
-                              <span className="text-white font-semibold">{bookingSuccess.serviceName}</span>
+                              <span className="text-white font-semibold">
+                                {bookingSuccess.serviceName}
+                              </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-white/40">Facility</span>
-                              <span className="text-white/80">{bookingSuccess.facilityName}</span>
+                              <span className="text-white/80">
+                                {bookingSuccess.facilityName}
+                              </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-white/40">Date</span>
-                              <span className="text-white/80">{bookingSuccess.date}</span>
+                              <span className="text-white/80">
+                                {bookingSuccess.date}
+                              </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-white/40">Time</span>
-                              <span className="text-white/80">{bookingSuccess.time}</span>
+                              <span className="text-white/80">
+                                {bookingSuccess.time}
+                              </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-white/40">Status</span>
-                              <span className="text-amber-400 font-bold text-[10px] uppercase tracking-wide">Pending Review</span>
+                              <span className="text-amber-400 font-bold text-[10px] uppercase tracking-wide">
+                                Pending Review
+                              </span>
                             </div>
                           </div>
                           <button
@@ -704,40 +1055,59 @@ export default function OstrabacusAssistant() {
 
               {/* ── Main bar ──────────────────────────────────────────────── */}
               <div className="flex items-center gap-3 px-4 py-3">
-
                 {/* Status dot + label */}
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <span className={`w-2 h-2 rounded-full shrink-0 ${s.dot}`} />
 
                   {/* Waveform (listening / speaking) */}
-                  {(voiceState === "listening" || voiceState === "speaking") && (
+                  {(voiceState === "listening" ||
+                    voiceState === "speaking") && (
                     <div className="flex items-end gap-0.5 h-4 shrink-0">
                       {[...Array(5)].map((_, i) => (
                         <motion.div
                           key={i}
                           className={`w-0.5 rounded-full ${voiceState === "speaking" ? "bg-purple-400" : "bg-accent"}`}
-                          animate={{ height: [2, voiceState === "speaking" ? 14 : 10, 2] }}
-                          transition={{ duration: 0.45, repeat: Infinity, delay: i * 0.09, ease: "easeInOut" }}
+                          animate={{
+                            height: [2, voiceState === "speaking" ? 14 : 10, 2],
+                          }}
+                          transition={{
+                            duration: 0.45,
+                            repeat: Infinity,
+                            delay: i * 0.09,
+                            ease: "easeInOut",
+                          }}
                         />
                       ))}
                     </div>
                   )}
 
-                  {voiceState === "connecting" || voiceState === "thinking"
-                    ? <Loader2 size={13} className="shrink-0 animate-spin text-white/50" />
-                    : null}
+                  {voiceState === "connecting" || voiceState === "thinking" ? (
+                    <Loader2
+                      size={13}
+                      className="shrink-0 animate-spin text-white/50"
+                    />
+                  ) : null}
 
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] text-white/40 leading-none">{s.label}</p>
+                    <p className="text-[10px] text-white/40 leading-none">
+                      {s.label}
+                    </p>
                     {/* Last message preview (collapsed mode) */}
                     {!expanded && lastMessage && (
-                      <p className={`text-xs truncate leading-tight mt-0.5 ${lastMessage.role === "user" ? "text-accent/80" : "text-white/70"}`}>
-                        {lastMessage.role === "user" ? "You: " : "AI: "}{lastMessage.text.split("\n")[0]}
+                      <p
+                        className={`text-xs truncate leading-tight mt-0.5 ${lastMessage.role === "user" ? "text-accent/80" : "text-white/70"}`}
+                      >
+                        {lastMessage.role === "user" ? "You: " : "AI: "}
+                        {lastMessage.text.split("\n")[0]}
                       </p>
                     )}
-                    {!expanded && !lastMessage && voiceState === "listening" && (
-                      <p className="text-xs text-white/50 mt-0.5">Speak naturally…</p>
-                    )}
+                    {!expanded &&
+                      !lastMessage &&
+                      voiceState === "listening" && (
+                        <p className="text-xs text-white/50 mt-0.5">
+                          Speak naturally…
+                        </p>
+                      )}
                   </div>
                 </div>
 
@@ -745,12 +1115,18 @@ export default function OstrabacusAssistant() {
                 <div className="flex items-center gap-1.5 shrink-0">
                   {/* Expand/collapse log */}
                   <button
-                    onClick={() => setExpanded(v => !v)}
+                    onClick={() => setExpanded((v) => !v)}
                     className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer"
-                    aria-label={expanded ? "Collapse transcript" : "Expand transcript"}
+                    aria-label={
+                      expanded ? "Collapse transcript" : "Expand transcript"
+                    }
                     title={expanded ? "Collapse" : "Show full conversation"}
                   >
-                    {expanded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                    {expanded ? (
+                      <ChevronDown size={14} />
+                    ) : (
+                      <ChevronUp size={14} />
+                    )}
                   </button>
 
                   {/* Mute */}
@@ -765,7 +1141,10 @@ export default function OstrabacusAssistant() {
 
                   {/* Reconnect */}
                   <button
-                    onClick={() => { closeSession(); setTimeout(openSession, 300); }}
+                    onClick={() => {
+                      closeSession();
+                      setTimeout(openSession, 300);
+                    }}
                     className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer"
                     aria-label="Reconnect session"
                     title="Reconnect"
@@ -786,32 +1165,43 @@ export default function OstrabacusAssistant() {
               </div>
 
               {/* ── Text input ──────────────────────────────────────────────── */}
-              <form onSubmit={handleTextSubmit} className="flex items-center gap-2 px-4 pb-3">
+              <form
+                onSubmit={handleTextSubmit}
+                className="flex items-center gap-2 px-4 pb-3"
+              >
                 <input
                   ref={inputRef}
                   type="text"
                   value={textInput}
-                  onChange={e => setTextInput(e.target.value)}
+                  onChange={(e) => setTextInput(e.target.value)}
                   placeholder={
-                    awaitingConfirmation ? "Type YES or NO…" :
-                    voiceState === "listening" ? "Or type here…" :
-                    voiceState === "connecting" ? "Connecting…" :
-                    "Type a message…"
+                    awaitingConfirmation
+                      ? "Type YES or NO…"
+                      : voiceState === "listening"
+                        ? "Or type here…"
+                        : voiceState === "connecting"
+                          ? "Connecting…"
+                          : "Type a message…"
                   }
-                  disabled={voiceState === "connecting" || voiceState === "error"}
+                  disabled={
+                    voiceState === "connecting" || voiceState === "error"
+                  }
                   className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-white/30 outline-none focus:border-accent/40 transition-colors"
                   aria-label="Type a message to Ostrabacus AI"
                 />
                 <button
                   type="submit"
-                  disabled={!textInput.trim() || voiceState === "connecting" || voiceState === "error"}
+                  disabled={
+                    !textInput.trim() ||
+                    voiceState === "connecting" ||
+                    voiceState === "error"
+                  }
                   className="w-7 h-7 bg-accent text-emerald-950 rounded-lg flex items-center justify-center font-bold text-sm disabled:opacity-30 cursor-pointer transition-opacity hover:opacity-90"
                   aria-label="Send message"
                 >
                   ↑
                 </button>
               </form>
-
             </div>
           </motion.div>
         )}

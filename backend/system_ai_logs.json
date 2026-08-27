@@ -1,0 +1,107 @@
+[
+    {
+        "id": "ai-68ce9baa",
+        "query": "Navigate to home",
+        "intent": "NAVIGATE",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T07:26:34.672626+00:00"
+    },
+    {
+        "id": "ai-d440dcde",
+        "query": "Navigate to services",
+        "intent": "NAVIGATE",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T07:26:47.273535+00:00"
+    },
+    {
+        "id": "ai-886082ad",
+        "query": "Navigate to services",
+        "intent": "NAVIGATE",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T07:44:16.404159+00:00"
+    },
+    {
+        "id": "ai-48be6f9f",
+        "query": "Prefilled booking for Malaria Diagonisis",
+        "intent": "PREFILL_BOOKING",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T07:45:09.671781+00:00"
+    },
+    {
+        "id": "ai-45e11583",
+        "query": "Navigate to services",
+        "intent": "NAVIGATE",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T07:45:56.414600+00:00"
+    },
+    {
+        "id": "ai-65c61853",
+        "query": "Prefilled booking for Malaria Diagonisis",
+        "intent": "PREFILL_BOOKING",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T07:47:42.411211+00:00"
+    },
+    {
+        "id": "ai-00f47270",
+        "query": "Navigate to home",
+        "intent": "NAVIGATE",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T09:48:20.611686+00:00"
+    },
+    {
+        "id": "ai-5215f3ae",
+        "query": "Navigate to facilities",
+        "intent": "NAVIGATE",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T09:48:33.286506+00:00"
+    },
+    {
+        "id": "ai-66b0febe",
+        "query": "Navigate to home",
+        "intent": "NAVIGATE",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T10:48:23.087238+00:00"
+    },
+    {
+        "id": "ai-7dcacdd2",
+        "query": "Navigate to services",
+        "intent": "NAVIGATE",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T10:48:53.739256+00:00"
+    },
+    {
+        "id": "ai-5dc43698",
+        "query": "View service: Teeth Cleaning",
+        "intent": "VIEW_SERVICE",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T10:49:24.653238+00:00"
+    },
+    {
+        "id": "ai-0cea5362",
+        "query": "Prefilled booking for Teeth Cleaning",
+        "intent": "PREFILL_BOOKING",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T10:50:33.425465+00:00"
+    },
+    {
+        "id": "ai-df69bad5",
+        "query": "Prefilled booking for Teeth Cleaning",
+        "intent": "PREFILL_BOOKING",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T11:29:14.048109+00:00"
+    },
+    {
+        "id": "ai-21d1ee17",
+        "query": "Prefilled booking for Teeth Cleaning",
+        "intent": "PREFILL_BOOKING",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T12:03:16.628896+00:00"
+    },
+    {
+        "id": "ai-a06f9de6",
+        "query": "Navigate to medicines",
+        "intent": "NAVIGATE",
+        "executionStrategy": "SUCCESS",
+        "timestamp": "2026-07-09T12:05:21.604552+00:00"
+    }
+]

@@ -89,4 +89,7 @@ export const api = {
       body: JSON.stringify(bookingData),
     });
   },
+  getBookings: async () => {
+    return await fetchApi("/bookings/");
+  },
 };

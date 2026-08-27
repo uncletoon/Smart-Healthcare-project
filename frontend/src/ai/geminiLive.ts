@@ -471,8 +471,6 @@ export const OSTRABACUS_TOOLS = [
   }
 ];
 
-// ─── System Instruction Builder ───────────────────────────────────────────────
-
 export function buildSystemInstruction(context: {
   patientName: string;
   phone: string;
@@ -481,6 +479,7 @@ export function buildSystemInstruction(context: {
   availableServices: Array<{ id?: string; name: string; facilityName: string }>;
   availableMedicines?: Array<{ id?: string; name: string; price?: number }>;
   pageContext?: { type: string; data: any } | null;
+  existingBookings?: Array<{ serviceName: string; date: string }>;
 }): string {
   const svcList = context.availableServices
     .map(s => `"${s.name}" (ID: ${s.id ?? "?"}, Facility: ${s.facilityName})`).join(", ");
@@ -497,9 +496,20 @@ export function buildSystemInstruction(context: {
     ? `Phone: ${context.phone} (already provided, do not ask for it).`
     : "Phone: not provided yet. You MUST ask the user for their phone number before calling open_booking.";
 
+  const currentDateStr = new Date().toISOString().split("T")[0];
+  const formattedBookings = context.existingBookings && context.existingBookings.length > 0
+    ? context.existingBookings.map(b => `- "${b.serviceName}" on ${b.date}`).join("\n")
+    : "  No existing bookings.";
+
   return `You are Ostrabacus, a warm and concise AI voice assistant for a healthcare platform in Rwanda.
 Your mission: help visually impaired users navigate the app, find services, and book appointments — entirely by voice.
 Messages prefixed with [system] are internal app directives — follow them silently without reading the brackets aloud.
+
+CURRENT DATE:
+  ${currentDateStr} (Use this date as "today" to resolve relative dates like "tomorrow", "day after tomorrow", etc.)
+
+EXISTING BOOKINGS CONTEXT (counts of active appointments per service and date):
+${formattedBookings}
 
 PATIENT NAME (always pre-filled, do not ask for it):
   Name: ${context.patientName}
@@ -518,7 +528,10 @@ TOOL USAGE RULES:
 1. navigate_to — use for "go to home/facilities/services/medicines".
 2. view_service — use when the user says "show me", "open", "view", "tell me about", or "details of" a specific service name. Look up the service_id from the Services list above and call this tool immediately.
 3. search_facilities — extract type/status/location from user's words; use "near me" for proximity requests.
-4. open_booking — collect service → date → time → phone number. Once all four are ready, speak the booking summary ONCE (service, facility, date, time, phone), then call open_booking. After the tool returns, read the prompt field aloud exactly once — do not add any extra words.
+4. open_booking — collect service → date → time → phone number. Once all four are ready, check the booking limit constraint first. If the requested service already has 5 or more existing bookings on the requested date:
+   - You MUST NOT call the open_booking or confirm_booking tools for that service on that date.
+   - Refuse the booking and instruct the user to come again after 1 day (e.g. say "I'm sorry, that service has reached its daily limit of 5 bookings for that date. Please try booking for [date + 1 day] instead").
+   - Otherwise, speak the booking summary ONCE (service, facility, date, time, phone), then call open_booking. After the tool returns, read the prompt field aloud exactly once — do not add any extra words.
 5. confirm_booking — CRITICAL: when a booking is pending and the user says YES/confirm/okay/sure/go ahead, call this tool IMMEDIATELY without speaking first. After the tool returns, say only "Your appointment has been booked!" — nothing more.
 6. cancel_booking — when a booking is pending and the user says NO/cancel/stop, call this tool immediately. After it returns say only "Booking cancelled."
 7. Page reading — if the user asks about details/requirements/price/medicines, use CURRENT PAGE context.

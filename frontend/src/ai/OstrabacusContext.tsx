@@ -153,7 +153,7 @@ export const OstrabacusProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setIsOpen((prev) => {
           const nextState = !prev;
           if (nextState) {
-            speakText("Ostrabacus assistant opened. How can I help you today?");
+            speakText("Ostrabacus assistant opened.");
           } else {
             speakText("Ostrabacus assistant closed.");
           }

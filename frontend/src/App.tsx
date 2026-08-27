@@ -20,6 +20,7 @@ import AdminMedicines from "./dashboard/pages/Medicines";
 import Bookings from "./dashboard/pages/Bookings";
 import Analytics from "./dashboard/pages/Analytics";
 import UserProfile from "./dashboard/pages/UserProfile";
+import AiSystem from "./dashboard/pages/AiSystem";
 
 // Authentication context and guards
 import { AuthProvider } from "./dashboard/context/AuthContext";
@@ -69,6 +70,7 @@ export default function App() {
               <Route path="bookings" element={<Bookings />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="profile" element={<UserProfile />} />
+              <Route path="ai-system" element={<AiSystem />} />
             </Route>
 
             {/* Admin Auth Routes */}

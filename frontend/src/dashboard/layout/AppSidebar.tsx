@@ -10,6 +10,7 @@ import {
   PieChart,
   Plug,
   UserCircle,
+  Sparkles,
 } from "lucide-react";
 import { useSidebar } from "../context/SidebarContext";
 import SidebarWidget from "./SidebarWidget";
@@ -46,6 +47,11 @@ const navItems: NavItem[] = [
     icon: <PieChart size={20} />,
     name: "Analytics",
     path: "/facility-dashboard/analytics",
+  },
+  {
+    icon: <Sparkles size={20} />,
+    name: "AI System",
+    path: "/facility-dashboard/ai-system",
   },
 ];
 

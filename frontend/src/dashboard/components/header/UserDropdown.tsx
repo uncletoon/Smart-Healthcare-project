@@ -2,10 +2,12 @@ import { useState } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { Link } from "react-router-dom";
+import { User as UserIcon } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
-  const [imgError, setImgError] = useState(false);
+  const { user } = useAuth();
 
   function toggleDropdown() {
     setIsOpen(!isOpen);
@@ -20,20 +22,11 @@ export default function UserDropdown() {
         onClick={toggleDropdown}
         className="flex items-center text-gray-700 dropdown-toggle dark:text-gray-400"
       >
-        <span className="mr-3 overflow-hidden rounded-full h-11 w-11 bg-teal-100 flex items-center justify-center text-teal-700 font-bold border border-teal-200">
-          {!imgError ? (
-            <img
-              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-              alt="User"
-              onError={() => setImgError(true)}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            "KH"
-          )}
+        <span className="mr-3 overflow-hidden rounded-full h-11 w-11 bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400 flex items-center justify-center border border-teal-100 dark:border-teal-900">
+          <UserIcon size={20} />
         </span>
 
-        <span className="block mr-1 font-medium text-theme-sm">Kigali Heights</span>
+        <span className="block mr-1 font-medium text-theme-sm">Account</span>
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
@@ -61,10 +54,10 @@ export default function UserDropdown() {
       >
         <div>
           <span className="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
-            Kigali Heights Pharmacy
+            {user?.full_name || "Profile"}
           </span>
           <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
-            kigaliheights@pharmacy.rw
+            {user?.email || "kigaliheights@pharmacy.rw"}
           </span>
         </div>
 
