@@ -1,10 +1,7 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
 
-# Kizazi Health - Frontend App
+# Frontend App
 
-This is the React frontend for the Kizazi Health (Healthcare Facility Registry), built with Vite, React Router, and Tailwind CSS. It connects dynamically to a Django REST Framework backend to seamlessly display healthcare facilities, services, and inventory.
+This is the React frontend for the Kizazi Health (Healthcare Facility Registry), built with Vite, React Router, and Tailwind CSS. It connects dynamically to a Django REST Framework backend to display healthcare facilities, services, and inventory seamlessly.
 
 ## 🚀 Features & Recent Updates
 
