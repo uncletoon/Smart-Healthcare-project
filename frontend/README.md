@@ -3,7 +3,7 @@
 
 This is the React frontend for the Healthcare Services and Facility Finder, built with Vite, React Router, and Tailwind CSS. It connects dynamically to a Django REST Framework backend to display healthcare facilities, services, and inventory seamlessly.
 
-## 🚀 Features & Recent Updates
+## Features & Recent Updates
 
 We have significantly upgraded the frontend to transition from static mock data to a fully integrated, dynamic architecture:
 
@@ -18,7 +18,7 @@ We have significantly upgraded the frontend to transition from static mock data 
   - Cleaned up all Tailwind CSS classes to adhere to modern v4 syntax (e.g., using `grow` instead of `flex-grow` and `aspect-4/3`).
 - **Vite Proxy Setup**: `vite.config.ts` handles CORS by proxying both `/api` requests and `/media` files directly to the Django server.
 
-## 🏗️ Architecture
+## Architecture
 
 - **Framework:** React 19 + Vite 6
 - **Styling:** Tailwind CSS v4
@@ -26,7 +26,7 @@ We have significantly upgraded the frontend to transition from static mock data 
 - **Icons & Animations:** Lucide React & Motion (Framer Motion)
 - **State Management:** Standard React Hooks (`useState`, `useEffect`)
 
-## 💻 Run Locally
+## Run Locally
 
 **Prerequisites:** Node.js (v18+) and Django backend fully configured.
 
