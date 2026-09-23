@@ -49,4 +49,3 @@ We have significantly upgraded the frontend to transition from static mock data 
    ```
    The application will start, and any calls to `/api/...` or `/media/...` will be automatically proxied to `http://127.0.0.1:8000`, bypassing any CORS issues during local development.
 
-> **Note on Medicines:** The `Medicines.tsx` page currently retains its mock data layout as a placeholder until the specific Pharmacy/Medicines backend models are finalized.
